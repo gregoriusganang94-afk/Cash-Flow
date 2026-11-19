@@ -108,7 +108,6 @@ function daysInMonth(year: number, month: number): number {
 
 export function buildPeriodHorizon(
   transactions: CashFlowTransaction[],
-  baseOpeningBalance: number,
   startPeriodKey: string,
   cutoffDay = 25,
   minMonths = 12
@@ -157,7 +156,6 @@ export function buildPeriodHorizon(
     grouped.set(key, bucket);
   }
 
-  let runningBalance = baseOpeningBalance;
   return keys.map((periodKey) => {
     const bucket = grouped.get(periodKey) || {
       income: 0,
@@ -166,10 +164,7 @@ export function buildPeriodHorizon(
       expenseCount: 0,
     };
     const range = getPeriodRange(periodKey, cutoffDay);
-    const openingBalance = runningBalance;
-    const netCashFlow = bucket.income - bucket.expense;
-    const closingBalance = openingBalance + netCashFlow;
-    runningBalance = closingBalance;
+    const closingBalance = bucket.income - bucket.expense;
 
     return {
       periodKey,
@@ -177,10 +172,8 @@ export function buildPeriodHorizon(
       shortLabel: range.shortLabel,
       startDate: range.startDate,
       endDate: range.endDate,
-      openingBalance,
       totalIncome: bucket.income,
       totalExpense: bucket.expense,
-      netCashFlow,
       closingBalance,
       transactionCount: bucket.incomeCount + bucket.expenseCount,
       incomeCount: bucket.incomeCount,

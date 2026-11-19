@@ -37,7 +37,7 @@ export default function App() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    updateBalanceSettings,
+    updateCycleSettings,
   } = useCashFlowStore();
 
   const [activeWindow, setActiveWindow] = useState<ActiveWindow>('ringkasan');
@@ -49,12 +49,8 @@ export default function App() {
     () =>
       settings || {
         userId: user?.uid || '',
-        baseOpeningBalance: 0,
         startPeriodKey: '2026-11',
         cutoffDay: 25,
-        githubRepo: '',
-        githubBranch: 'main',
-        githubFilePath: 'cashflow/ledger.json',
       },
     [settings, user?.uid]
   );
@@ -63,17 +59,11 @@ export default function App() {
     () =>
       buildPeriodHorizon(
         transactions,
-        activeSettings.baseOpeningBalance,
         activeSettings.startPeriodKey,
         activeSettings.cutoffDay,
         12
       ),
-    [
-      transactions,
-      activeSettings.baseOpeningBalance,
-      activeSettings.startPeriodKey,
-      activeSettings.cutoffDay,
-    ]
+    [transactions, activeSettings.startPeriodKey, activeSettings.cutoffDay]
   );
 
   const kpiMetrics = useMemo(() => {
@@ -84,7 +74,6 @@ export default function App() {
     if (selected) {
       return {
         scopeLabel: selected.label,
-        openingBalance: selected.openingBalance,
         totalIncome: selected.totalIncome,
         totalExpense: selected.totalExpense,
         closingBalance: selected.closingBalance,
@@ -93,22 +82,17 @@ export default function App() {
 
     const totalIncome = periods.reduce((sum, p) => sum + p.totalIncome, 0);
     const totalExpense = periods.reduce((sum, p) => sum + p.totalExpense, 0);
-    const firstOpening =
-      periods.length > 0 ? periods[0].openingBalance : activeSettings.baseOpeningBalance;
-    const lastClosing =
-      periods.length > 0 ? periods[periods.length - 1].closingBalance : firstOpening;
 
     return {
       scopeLabel:
         periods.length > 0
           ? `${periods[0].shortLabel} s/d ${periods[periods.length - 1].shortLabel}`
           : '12 Periode',
-      openingBalance: firstOpening,
       totalIncome,
       totalExpense,
-      closingBalance: lastClosing,
+      closingBalance: totalIncome - totalExpense,
     };
-  }, [periods, selectedPeriodKey, activeSettings.baseOpeningBalance]);
+  }, [periods, selectedPeriodKey]);
 
   const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
@@ -220,8 +204,8 @@ export default function App() {
       <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20 md:pb-8 space-y-6">
         {!authReady ? (
           <div className="space-y-6 animate-pulse">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[0, 1, 2, 3].map((idx) => (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[0, 1, 2].map((idx) => (
                 <div
                   key={idx}
                   className="h-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl"
@@ -251,7 +235,7 @@ export default function App() {
                 Kelola Arus Kas Periode 25 November – 25 Desember dan Siklus Berikutnya
               </h1>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                Catat pemasukan dan pengeluaran harian langsung dari HP atau desktop, dan pantau carry-over saldo awal hingga saldo akhir antar periode secara otomatis di Firestore.
+                Catat pemasukan dan pengeluaran harian langsung dari HP atau desktop, dan pantau ringkasan saldo tiap periode sesuai tanggal transaksi secara otomatis di Firestore.
               </p>
 
               {authError && (
@@ -291,8 +275,8 @@ export default function App() {
                   <span className="font-mono text-slate-600 dark:text-slate-400">25 Jan – 24 Feb 2027</span>
                 </div>
                 <div className="py-2.5 flex items-center justify-between">
-                  <span className="font-medium text-slate-700 dark:text-slate-300">Carry-over Saldo</span>
-                  <span className="text-slate-600 dark:text-slate-400">Saldo Akhir &rarr; Saldo Awal</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Perhitungan Periode</span>
+                  <span className="text-slate-600 dark:text-slate-400">Pemasukan - Pengeluaran</span>
                 </div>
               </div>
             </div>
@@ -342,8 +326,8 @@ export default function App() {
 
             {dataLoading ? (
               <div className="space-y-6 animate-pulse">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[0, 1, 2, 3].map((idx) => (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {[0, 1, 2].map((idx) => (
                     <div
                       key={idx}
                       className="h-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl"
@@ -359,22 +343,8 @@ export default function App() {
                   <div className="space-y-6">
                     <section
                       id="ringkasan"
-                      className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
+                      className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4"
                     >
-                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-1.5">
-                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          Total Saldo Awal
-                        </div>
-                        <div className="font-mono tabular-nums text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate">
-                          {formatIDR(kpiMetrics.openingBalance)}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {selectedPeriodKey
-                            ? 'Carry-over periode terpilih'
-                            : 'Saldo awal dasar'}
-                        </div>
-                      </div>
-
                       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-1.5">
                         <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           Total Pemasukan
@@ -383,7 +353,7 @@ export default function App() {
                           +{formatIDR(kpiMetrics.totalIncome)}
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
-                          Akumulasi masuk
+                          Sesuai tanggal transaksi
                         </div>
                       </div>
 
@@ -395,7 +365,7 @@ export default function App() {
                           -{formatIDR(kpiMetrics.totalExpense)}
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
-                          Akumulasi keluar
+                          Sesuai tanggal transaksi
                         </div>
                       </div>
 
@@ -413,7 +383,7 @@ export default function App() {
                           {formatIDR(kpiMetrics.closingBalance)}
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
-                          Awal + Masuk - Keluar
+                          Pemasukan - Pengeluaran
                         </div>
                       </div>
                     </section>
@@ -436,7 +406,7 @@ export default function App() {
                         editingTransaction={editingTransaction}
                         onCancelEdit={() => setEditingTransaction(null)}
                         onSubmitTransaction={handleSubmitTransaction}
-                        onSaveBalanceSettings={updateBalanceSettings}
+                        onSaveCycleSettings={updateCycleSettings}
                       />
                     </div>
 
@@ -444,7 +414,7 @@ export default function App() {
                       <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex items-center justify-between gap-2">
                         <div>
                           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                            Status Saldo &amp; Entri Terakhir
+                            Ringkasan &amp; Entri Terakhir
                           </h2>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                             Pembaruan otomatis ke Firestore
@@ -459,21 +429,29 @@ export default function App() {
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg p-3.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg p-3.5">
                         <div>
                           <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Saldo Awal Dasar
+                            Pemasukan
                           </div>
-                          <div className="font-mono tabular-nums text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
-                            {formatIDR(activeSettings.baseOpeningBalance)}
+                          <div className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">
+                            +{formatIDR(kpiMetrics.totalIncome)}
                           </div>
                         </div>
                         <div>
                           <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Saldo Akhir Terkini
+                            Pengeluaran
+                          </div>
+                          <div className="font-mono tabular-nums text-xs sm:text-sm font-semibold text-red-700 dark:text-red-400 mt-0.5 truncate">
+                            -{formatIDR(kpiMetrics.totalExpense)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Saldo Akhir
                           </div>
                           <div
-                            className={`font-mono tabular-nums text-sm font-bold mt-0.5 ${
+                            className={`font-mono tabular-nums text-xs sm:text-sm font-bold mt-0.5 truncate ${
                               kpiMetrics.closingBalance < 0
                                 ? 'text-red-700 dark:text-red-400'
                                 : 'text-slate-900 dark:text-white'

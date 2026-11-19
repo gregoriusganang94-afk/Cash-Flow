@@ -15,19 +15,15 @@ export function SummaryTable({
   onSelectPeriod,
   onOpenTransactions,
 }: SummaryTableProps) {
-  const firstOpeningBalance = periods.length > 0 ? periods[0].openingBalance : 0;
-  const lastClosingBalance =
-    periods.length > 0 ? periods[periods.length - 1].closingBalance : 0;
-
   const totals = periods.reduce(
     (acc, p) => ({
       income: acc.income + p.totalIncome,
       expense: acc.expense + p.totalExpense,
-      net: acc.net + p.netCashFlow,
       txCount: acc.txCount + p.transactionCount,
     }),
-    { income: 0, expense: 0, net: 0, txCount: 0 }
+    { income: 0, expense: 0, txCount: 0 }
   );
+  const totalClosingBalance = totals.income - totals.expense;
 
   return (
     <section
@@ -40,7 +36,7 @@ export function SummaryTable({
             Tabel Ringkasan Arus Kas per Periode
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Saldo akhir tiap periode otomatis menjadi saldo awal periode berikutnya
+            Setiap periode menghitung pemasukan, pengeluaran, dan saldo akhir sesuai tanggal transaksi pada periode tersebut
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
@@ -71,10 +67,8 @@ export function SummaryTable({
             <tr className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
               <th className="py-3 px-4 whitespace-nowrap">Periode Siklus</th>
               <th className="py-3 px-3 text-right whitespace-nowrap">Trx</th>
-              <th className="py-3 px-4 text-right whitespace-nowrap">Saldo Awal</th>
               <th className="py-3 px-4 text-right whitespace-nowrap">Pemasukan</th>
               <th className="py-3 px-4 text-right whitespace-nowrap">Pengeluaran</th>
-              <th className="py-3 px-4 text-right whitespace-nowrap">Arus Kas Bersih</th>
               <th className="py-3 px-4 text-right whitespace-nowrap">Saldo Akhir</th>
             </tr>
           </thead>
@@ -97,26 +91,11 @@ export function SummaryTable({
                   <td className="py-2.5 px-3 text-right font-mono tabular-nums text-xs text-slate-500 dark:text-slate-400">
                     {period.transactionCount}
                   </td>
-                  <td className="py-2.5 px-4 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                    {formatIDR(period.openingBalance)}
-                  </td>
                   <td className="py-2.5 px-4 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
                     {period.totalIncome > 0 ? `+${formatIDR(period.totalIncome)}` : formatIDR(0)}
                   </td>
                   <td className="py-2.5 px-4 text-right font-mono tabular-nums text-red-700 dark:text-red-400 whitespace-nowrap">
                     {period.totalExpense > 0 ? `-${formatIDR(period.totalExpense)}` : formatIDR(0)}
-                  </td>
-                  <td
-                    className={`py-2.5 px-4 text-right font-mono tabular-nums font-medium whitespace-nowrap ${
-                      period.netCashFlow > 0
-                        ? 'text-emerald-700 dark:text-emerald-400'
-                        : period.netCashFlow < 0
-                          ? 'text-red-700 dark:text-red-400'
-                          : 'text-slate-500 dark:text-slate-400'
-                    }`}
-                  >
-                    {period.netCashFlow > 0 ? '+' : ''}
-                    {formatIDR(period.netCashFlow)}
                   </td>
                   <td
                     className={`py-2.5 px-4 text-right font-mono tabular-nums font-semibold whitespace-nowrap ${
@@ -133,11 +112,8 @@ export function SummaryTable({
           </tbody>
           <tfoot>
             <tr className="bg-slate-900 dark:bg-slate-800 text-white text-xs sm:text-sm font-semibold border-t border-slate-800 dark:border-slate-700">
-              <td className="py-3 px-4 whitespace-nowrap">Total &amp; Saldo Akhir Horizon</td>
+              <td className="py-3 px-4 whitespace-nowrap">Total Keseluruhan</td>
               <td className="py-3 px-3 text-right font-mono tabular-nums">{totals.txCount}</td>
-              <td className="py-3 px-4 text-right font-mono tabular-nums whitespace-nowrap">
-                {formatIDR(firstOpeningBalance)}
-              </td>
               <td className="py-3 px-4 text-right font-mono tabular-nums text-emerald-300 whitespace-nowrap">
                 +{formatIDR(totals.income)}
               </td>
@@ -145,11 +121,7 @@ export function SummaryTable({
                 -{formatIDR(totals.expense)}
               </td>
               <td className="py-3 px-4 text-right font-mono tabular-nums whitespace-nowrap">
-                {totals.net > 0 ? '+' : ''}
-                {formatIDR(totals.net)}
-              </td>
-              <td className="py-3 px-4 text-right font-mono tabular-nums whitespace-nowrap">
-                {formatIDR(lastClosingBalance)}
+                {formatIDR(totalClosingBalance)}
               </td>
             </tr>
           </tfoot>

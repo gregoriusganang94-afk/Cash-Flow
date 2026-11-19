@@ -2,7 +2,7 @@
   "entities": {
     "UserSettings": {
       "title": "UserSettings",
-      "description": "Cash flow base opening balance, cycle configuration, and GitHub repository metadata for a user.",
+      "description": "Cash flow cycle configuration for a user.",
       "type": "object",
       "properties": {
         "userId": {
@@ -10,10 +10,6 @@
           "pattern": "^[a-zA-Z0-9_\\-]+$",
           "maxLength": 128,
           "description": "Owner Firebase Auth UID."
-        },
-        "baseOpeningBalance": {
-          "type": "number",
-          "description": "Initial opening balance before the starting period."
         },
         "startPeriodKey": {
           "type": "string",
@@ -25,21 +21,6 @@
         "cutoffDay": {
           "type": "integer",
           "description": "Day of month when each cash flow cycle begins (default 25)."
-        },
-        "githubRepo": {
-          "type": "string",
-          "maxLength": 200,
-          "description": "Connected GitHub repository in owner/repo format."
-        },
-        "githubBranch": {
-          "type": "string",
-          "maxLength": 100,
-          "description": "Target GitHub repository branch."
-        },
-        "githubFilePath": {
-          "type": "string",
-          "maxLength": 200,
-          "description": "File path inside the GitHub repository for ledger snapshots."
         },
         "createdAt": {
           "type": "string",
@@ -54,7 +35,6 @@
       },
       "required": [
         "userId",
-        "baseOpeningBalance",
         "startPeriodKey",
         "cutoffDay",
         "createdAt",
@@ -137,7 +117,7 @@
       "schema": {
         "$ref": "#/entities/UserSettings"
       },
-      "description": "User cash flow cycle settings, base opening balance, and linked GitHub repository metadata."
+      "description": "User cash flow cycle settings (startPeriodKey and cutoffDay)."
     },
     "/users/{userId}/transactions/{transactionId}": {
       "schema": {

@@ -16,8 +16,7 @@ interface TransactionFormProps {
   editingTransaction: CashFlowTransaction | null;
   onCancelEdit: () => void;
   onSubmitTransaction: (input: TransactionInput, editingId?: string) => Promise<void>;
-  onSaveBalanceSettings: (next: {
-    baseOpeningBalance: number;
+  onSaveCycleSettings: (next: {
     startPeriodKey: string;
     cutoffDay: number;
   }) => Promise<void>;
@@ -28,7 +27,7 @@ export function TransactionForm({
   editingTransaction,
   onCancelEdit,
   onSubmitTransaction,
-  onSaveBalanceSettings,
+  onSaveCycleSettings,
 }: TransactionFormProps) {
   const [type, setType] = useState<TransactionType>('income');
   const [date, setDate] = useState('2026-11-25');
@@ -41,17 +40,15 @@ export function TransactionForm({
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
   const [showSettings, setShowSettings] = useState(false);
-  const [openingInput, setOpeningInput] = useState(String(settings.baseOpeningBalance));
   const [startPeriodInput, setStartPeriodInput] = useState(settings.startPeriodKey);
   const [cutoffDayInput, setCutoffDayInput] = useState(String(settings.cutoffDay));
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setOpeningInput(String(settings.baseOpeningBalance));
     setStartPeriodInput(settings.startPeriodKey);
     setCutoffDayInput(String(settings.cutoffDay));
-  }, [settings.baseOpeningBalance, settings.startPeriodKey, settings.cutoffDay]);
+  }, [settings.startPeriodKey, settings.cutoffDay]);
 
   useEffect(() => {
     if (editingTransaction) {
@@ -144,13 +141,8 @@ export function TransactionForm({
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSettingsMsg(null);
-    const nextOpening = Number(openingInput.replace(/[^\d.-]/g, ''));
     const nextCutoff = Math.trunc(Number(cutoffDayInput));
 
-    if (!Number.isFinite(nextOpening) || Math.abs(nextOpening) > BLUEPRINT_LIMITS.MAX_AMOUNT) {
-      setSettingsMsg('Nominal saldo awal dasar tidak valid.');
-      return;
-    }
     if (!BLUEPRINT_LIMITS.PERIOD_KEY_PATTERN.test(startPeriodInput)) {
       setSettingsMsg('Format periode awal harus YYYY-MM (contoh: 2026-11).');
       return;
@@ -162,12 +154,11 @@ export function TransactionForm({
 
     setSavingSettings(true);
     try {
-      await onSaveBalanceSettings({
-        baseOpeningBalance: nextOpening,
+      await onSaveCycleSettings({
         startPeriodKey: startPeriodInput,
         cutoffDay: nextCutoff,
       });
-      setSettingsMsg('Pengaturan saldo awal & siklus tersimpan.');
+      setSettingsMsg('Pengaturan siklus periode tersimpan.');
     } catch (err) {
       setSettingsMsg(err instanceof Error ? err.message : 'Gagal menyimpan pengaturan.');
     } finally {
@@ -195,7 +186,7 @@ export function TransactionForm({
           className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
-          Atur Saldo Awal
+          Atur Siklus
         </button>
       </div>
 
@@ -206,7 +197,7 @@ export function TransactionForm({
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-              Konfigurasi Saldo Awal & Siklus Periode
+              Konfigurasi Siklus Periode
             </span>
             <button
               type="button"
@@ -217,20 +208,7 @@ export function TransactionForm({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
-                Saldo Awal Dasar (Rp)
-              </label>
-              <input
-                type="number"
-                step="1"
-                value={openingInput}
-                onChange={(e) => setOpeningInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
-                placeholder="0"
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Periode Mulai (YYYY-MM)
@@ -258,7 +236,7 @@ export function TransactionForm({
           </div>
           <div className="flex items-center justify-between gap-3 pt-1">
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              {settingsMsg || `Saldo dasar saat ini: ${formatIDR(settings.baseOpeningBalance)}`}
+              {settingsMsg || `Cut-off saat ini: tanggal ${settings.cutoffDay}`}
             </span>
             <button
               type="submit"

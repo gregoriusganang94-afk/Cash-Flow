@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import type { PeriodSummary } from '../types/cashflow';
 import { formatCompactIDR, formatIDR } from '../utils/cashflowPeriods';
 
-type ChartMode = 'balances' | 'cashflow' | 'all';
+type ChartMode = 'cashflow' | 'closing' | 'all';
 
 interface MonthlyBarChartProps {
   periods: PeriodSummary[];
@@ -19,7 +19,7 @@ export function MonthlyBarChart({
   onSelectPeriod,
   onViewPeriodTransactions,
 }: MonthlyBarChartProps) {
-  const [mode, setMode] = useState<ChartMode>('balances');
+  const [mode, setMode] = useState<ChartMode>('cashflow');
   const [hoveredPeriod, setHoveredPeriod] = useState<PeriodSummary | null>(null);
 
   const visiblePeriods = useMemo(() => periods.slice(0, 12), [periods]);
@@ -29,11 +29,11 @@ export function MonthlyBarChart({
     let max = 0;
     for (const p of visiblePeriods) {
       const candidates =
-        mode === 'balances'
-          ? [p.openingBalance, p.closingBalance]
-          : mode === 'cashflow'
-            ? [p.totalIncome, p.totalExpense]
-            : [p.openingBalance, p.totalIncome, p.totalExpense, p.closingBalance];
+        mode === 'cashflow'
+          ? [p.totalIncome, p.totalExpense]
+          : mode === 'closing'
+            ? [p.closingBalance]
+            : [p.totalIncome, p.totalExpense, p.closingBalance];
       for (const val of candidates) {
         if (val < min) min = val;
         if (val > max) max = val;
@@ -73,24 +73,19 @@ export function MonthlyBarChart({
 
   const groupWidth = visiblePeriods.length > 0 ? plotWidth / visiblePeriods.length : plotWidth;
 
-  const openingColor = isDark ? '#64748B' : '#94A3B8';
   const closingColor = isDark ? '#38BDF8' : '#0F172A';
   const incomeColor = isDark ? '#22C55E' : '#16A34A';
   const expenseColor = isDark ? '#EF4444' : '#DC2626';
 
   const seriesConfig =
-    mode === 'balances'
+    mode === 'cashflow'
       ? [
-          { key: 'openingBalance' as const, label: 'Saldo Awal', color: openingColor },
-          { key: 'closingBalance' as const, label: 'Saldo Akhir', color: closingColor },
+          { key: 'totalIncome' as const, label: 'Pemasukan', color: incomeColor },
+          { key: 'totalExpense' as const, label: 'Pengeluaran', color: expenseColor },
         ]
-      : mode === 'cashflow'
-        ? [
-            { key: 'totalIncome' as const, label: 'Pemasukan', color: incomeColor },
-            { key: 'totalExpense' as const, label: 'Pengeluaran', color: expenseColor },
-          ]
+      : mode === 'closing'
+        ? [{ key: 'closingBalance' as const, label: 'Saldo Akhir', color: closingColor }]
         : [
-            { key: 'openingBalance' as const, label: 'Saldo Awal', color: openingColor },
             { key: 'totalIncome' as const, label: 'Pemasukan', color: incomeColor },
             { key: 'totalExpense' as const, label: 'Pengeluaran', color: expenseColor },
             { key: 'closingBalance' as const, label: 'Saldo Akhir', color: closingColor },
@@ -112,22 +107,11 @@ export function MonthlyBarChart({
             Grafik Batang Bulanan per Siklus
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Pantau perbandingan saldo awal, saldo akhir, pemasukan, dan pengeluaran tiap periode
+            Pantau perbandingan pemasukan, pengeluaran, dan saldo akhir tiap periode
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setMode('balances')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              mode === 'balances'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Saldo Awal vs Akhir
-          </button>
           <button
             type="button"
             onClick={() => setMode('cashflow')}
@@ -138,6 +122,17 @@ export function MonthlyBarChart({
             }`}
           >
             Pemasukan vs Pengeluaran
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('closing')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              mode === 'closing'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Saldo Akhir
           </button>
           <button
             type="button"
@@ -320,12 +315,6 @@ export function MonthlyBarChart({
           </div>
           <div className="flex flex-wrap items-center gap-5 font-mono tabular-nums">
             <div>
-              <span className="font-sans text-slate-500 dark:text-slate-400 mr-1.5">Saldo Awal:</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {formatIDR(activePeriod.openingBalance)}
-              </span>
-            </div>
-            <div>
               <span className="font-sans text-slate-500 dark:text-slate-400 mr-1.5">Pemasukan:</span>
               <span className="font-semibold text-emerald-700 dark:text-emerald-400">
                 +{formatIDR(activePeriod.totalIncome)}
@@ -339,7 +328,13 @@ export function MonthlyBarChart({
             </div>
             <div>
               <span className="font-sans text-slate-500 dark:text-slate-400 mr-1.5">Saldo Akhir:</span>
-              <span className="font-bold text-slate-900 dark:text-white">
+              <span
+                className={`font-bold ${
+                  activePeriod.closingBalance < 0
+                    ? 'text-red-700 dark:text-red-400'
+                    : 'text-slate-900 dark:text-white'
+                }`}
+              >
                 {formatIDR(activePeriod.closingBalance)}
               </span>
             </div>

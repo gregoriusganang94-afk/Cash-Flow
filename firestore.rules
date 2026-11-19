@@ -33,24 +33,18 @@ service cloud.firestore {
 
     // 3. Entity Validation Blueprints
     function isValidUserSettings(data, userId) {
-      return data.keys().hasAll(['userId', 'baseOpeningBalance', 'startPeriodKey', 'cutoffDay', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['userId', 'baseOpeningBalance', 'startPeriodKey', 'cutoffDay', 'githubRepo', 'githubBranch', 'githubFilePath', 'createdAt', 'updatedAt'])
+      return data.keys().hasAll(['userId', 'startPeriodKey', 'cutoffDay', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'startPeriodKey', 'cutoffDay', 'createdAt', 'updatedAt'])
         && data.userId is string
         && isValidId(data.userId)
         && data.userId == request.auth.uid
         && data.userId == userId
-        && data.baseOpeningBalance is number
-        && data.baseOpeningBalance >= -1000000000000
-        && data.baseOpeningBalance <= 1000000000000
         && data.startPeriodKey is string
         && data.startPeriodKey.size() == 7
         && data.startPeriodKey.matches('^20[0-9]{2}-(0[1-9]|1[0-2])$')
         && data.cutoffDay is int
         && data.cutoffDay >= 1
         && data.cutoffDay <= 28
-        && (!('githubRepo' in data) || (data.githubRepo is string && data.githubRepo.size() <= 200))
-        && (!('githubBranch' in data) || (data.githubBranch is string && data.githubBranch.size() <= 100))
-        && (!('githubFilePath' in data) || (data.githubFilePath is string && data.githubFilePath.size() <= 200))
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -106,9 +100,8 @@ service cloud.firestore {
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time
         && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['baseOpeningBalance', 'startPeriodKey', 'cutoffDay', 'updatedAt']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['githubRepo', 'githubBranch', 'githubFilePath', 'updatedAt']) ||
-          incoming().diff(existing()).affectedKeys().hasOnly(['baseOpeningBalance', 'startPeriodKey', 'cutoffDay', 'githubRepo', 'githubBranch', 'githubFilePath', 'updatedAt'])
+          incoming().diff(existing()).affectedKeys().hasOnly(['startPeriodKey', 'cutoffDay', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['baseOpeningBalance', 'githubRepo', 'githubBranch', 'githubFilePath', 'updatedAt'])
         );
 
       allow delete: if false;

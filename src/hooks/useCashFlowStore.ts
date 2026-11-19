@@ -8,6 +8,7 @@ import {
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   onSnapshot,
@@ -16,7 +17,6 @@ import {
   setDoc,
   updateDoc,
   where,
-  writeBatch,
   type Timestamp,
 } from 'firebase/firestore';
 import {
@@ -44,12 +44,8 @@ export interface TransactionInput {
 
 const DEFAULT_SETTINGS = (uid: string): UserSettings => ({
   userId: uid,
-  baseOpeningBalance: 0,
   startPeriodKey: '2026-11',
   cutoffDay: 25,
-  githubRepo: '',
-  githubBranch: 'main',
-  githubFilePath: 'cashflow/ledger.json',
 });
 
 function timestampToMs(val: unknown): number {
@@ -113,7 +109,6 @@ export function useCashFlowStore() {
   const [dataLoading, setDataLoading] = useState(false);
   const [firestoreError, setFirestoreError] = useState<Error | null>(null);
 
-  // Surface Firestore errors inside React render so ErrorBoundary catches permission/connection failures cleanly
   if (firestoreError) {
     throw firestoreError;
   }
@@ -152,6 +147,22 @@ export function useCashFlowStore() {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
+        } else {
+          const existingData = snap.data();
+          const hasLegacyFields =
+            'baseOpeningBalance' in existingData ||
+            'githubRepo' in existingData ||
+            'githubBranch' in existingData ||
+            'githubFilePath' in existingData;
+          if (hasLegacyFields) {
+            await updateDoc(userDocRef, {
+              baseOpeningBalance: deleteField(),
+              githubRepo: deleteField(),
+              githubBranch: deleteField(),
+              githubFilePath: deleteField(),
+              updatedAt: serverTimestamp(),
+            });
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -173,13 +184,8 @@ export function useCashFlowStore() {
             const d = docSnap.data();
             setSettings({
               userId: uid,
-              baseOpeningBalance: typeof d.baseOpeningBalance === 'number' ? d.baseOpeningBalance : 0,
               startPeriodKey: typeof d.startPeriodKey === 'string' ? d.startPeriodKey : '2026-11',
               cutoffDay: typeof d.cutoffDay === 'number' ? d.cutoffDay : 25,
-              githubRepo: typeof d.githubRepo === 'string' ? d.githubRepo : '',
-              githubBranch: typeof d.githubBranch === 'string' ? d.githubBranch : 'main',
-              githubFilePath:
-                typeof d.githubFilePath === 'string' ? d.githubFilePath : 'cashflow/ledger.json',
             });
           } else {
             setSettings(DEFAULT_SETTINGS(uid));
@@ -319,13 +325,9 @@ export function useCashFlowStore() {
     [user]
   );
 
-  const updateBalanceSettings = useCallback(
-    async (next: { baseOpeningBalance: number; startPeriodKey: string; cutoffDay: number }) => {
+  const updateCycleSettings = useCallback(
+    async (next: { startPeriodKey: string; cutoffDay: number }) => {
       if (!user) throw new Error('Silakan masuk terlebih dahulu.');
-      const baseOpeningBalance = Math.round(Number(next.baseOpeningBalance));
-      if (!Number.isFinite(baseOpeningBalance) || Math.abs(baseOpeningBalance) > BLUEPRINT_LIMITS.MAX_AMOUNT) {
-        throw new Error('Nominal saldo awal dasar tidak valid.');
-      }
       if (!BLUEPRINT_LIMITS.PERIOD_KEY_PATTERN.test(next.startPeriodKey)) {
         throw new Error('Format periode mulai harus YYYY-MM.');
       }
@@ -338,7 +340,6 @@ export function useCashFlowStore() {
       const userRef = doc(db, 'users', user.uid);
       try {
         await updateDoc(userRef, {
-          baseOpeningBalance,
           startPeriodKey: next.startPeriodKey,
           cutoffDay,
           updatedAt: serverTimestamp(),
@@ -348,68 +349,6 @@ export function useCashFlowStore() {
       }
     },
     [user]
-  );
-
-  const updateGithubSettings = useCallback(
-    async (next: { githubRepo: string; githubBranch: string; githubFilePath: string }) => {
-      if (!user) throw new Error('Silakan masuk terlebih dahulu.');
-      const githubRepo = next.githubRepo.trim().slice(0, BLUEPRINT_LIMITS.MAX_REPO_LEN);
-      const githubBranch = (next.githubBranch.trim() || 'main').slice(0, BLUEPRINT_LIMITS.MAX_BRANCH_LEN);
-      const githubFilePath = (next.githubFilePath.trim() || 'cashflow/ledger.json').slice(
-        0,
-        BLUEPRINT_LIMITS.MAX_FILEPATH_LEN
-      );
-
-      const path = `users/${user.uid}`;
-      const userRef = doc(db, 'users', user.uid);
-      try {
-        await updateDoc(userRef, {
-          githubRepo,
-          githubBranch,
-          githubFilePath,
-          updatedAt: serverTimestamp(),
-        });
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, path);
-      }
-    },
-    [user]
-  );
-
-  const importTransactionsBatch = useCallback(
-    async (items: TransactionInput[], baseOpeningBalance?: number | null) => {
-      if (!user) throw new Error('Silakan masuk terlebih dahulu.');
-      const cutoffDay = settings?.cutoffDay ?? 25;
-      const chunkSize = 400;
-
-      try {
-        if (typeof baseOpeningBalance === 'number' && Number.isFinite(baseOpeningBalance)) {
-          await updateDoc(doc(db, 'users', user.uid), {
-            baseOpeningBalance: Math.round(baseOpeningBalance),
-            updatedAt: serverTimestamp(),
-          });
-        }
-
-        for (let i = 0; i < items.length; i += chunkSize) {
-          const batch = writeBatch(db);
-          const slice = items.slice(i, i + chunkSize);
-          for (const item of slice) {
-            const sanitized = sanitizeTransactionPayload(item, cutoffDay);
-            const newRef = doc(collection(db, 'users', user.uid, 'transactions'));
-            batch.set(newRef, {
-              userId: user.uid,
-              ...sanitized,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            });
-          }
-          await batch.commit();
-        }
-      } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/transactions`);
-      }
-    },
-    [user, settings?.cutoffDay]
   );
 
   return {
@@ -425,8 +364,6 @@ export function useCashFlowStore() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    updateBalanceSettings,
-    updateGithubSettings,
-    importTransactionsBatch,
+    updateCycleSettings,
   };
 }
