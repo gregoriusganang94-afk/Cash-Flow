@@ -7,13 +7,17 @@ type ChartMode = 'balances' | 'cashflow' | 'all';
 interface MonthlyBarChartProps {
   periods: PeriodSummary[];
   selectedPeriodKey: string | null;
+  isDark: boolean;
   onSelectPeriod: (periodKey: string | null) => void;
+  onViewPeriodTransactions?: (periodKey: string) => void;
 }
 
 export function MonthlyBarChart({
   periods,
   selectedPeriodKey,
+  isDark,
   onSelectPeriod,
+  onViewPeriodTransactions,
 }: MonthlyBarChartProps) {
   const [mode, setMode] = useState<ChartMode>('balances');
   const [hoveredPeriod, setHoveredPeriod] = useState<PeriodSummary | null>(null);
@@ -69,47 +73,57 @@ export function MonthlyBarChart({
 
   const groupWidth = visiblePeriods.length > 0 ? plotWidth / visiblePeriods.length : plotWidth;
 
+  const openingColor = isDark ? '#64748B' : '#94A3B8';
+  const closingColor = isDark ? '#38BDF8' : '#0F172A';
+  const incomeColor = isDark ? '#22C55E' : '#16A34A';
+  const expenseColor = isDark ? '#EF4444' : '#DC2626';
+
   const seriesConfig =
     mode === 'balances'
       ? [
-          { key: 'openingBalance' as const, label: 'Saldo Awal', color: '#94A3B8' },
-          { key: 'closingBalance' as const, label: 'Saldo Akhir', color: '#0F172A' },
+          { key: 'openingBalance' as const, label: 'Saldo Awal', color: openingColor },
+          { key: 'closingBalance' as const, label: 'Saldo Akhir', color: closingColor },
         ]
       : mode === 'cashflow'
         ? [
-            { key: 'totalIncome' as const, label: 'Pemasukan', color: '#16A34A' },
-            { key: 'totalExpense' as const, label: 'Pengeluaran', color: '#DC2626' },
+            { key: 'totalIncome' as const, label: 'Pemasukan', color: incomeColor },
+            { key: 'totalExpense' as const, label: 'Pengeluaran', color: expenseColor },
           ]
         : [
-            { key: 'openingBalance' as const, label: 'Saldo Awal', color: '#94A3B8' },
-            { key: 'totalIncome' as const, label: 'Pemasukan', color: '#16A34A' },
-            { key: 'totalExpense' as const, label: 'Pengeluaran', color: '#DC2626' },
-            { key: 'closingBalance' as const, label: 'Saldo Akhir', color: '#0F172A' },
+            { key: 'openingBalance' as const, label: 'Saldo Awal', color: openingColor },
+            { key: 'totalIncome' as const, label: 'Pemasukan', color: incomeColor },
+            { key: 'totalExpense' as const, label: 'Pengeluaran', color: expenseColor },
+            { key: 'closingBalance' as const, label: 'Saldo Akhir', color: closingColor },
           ];
+
+  const activePeriod =
+    hoveredPeriod ||
+    visiblePeriods.find((p) => p.periodKey === selectedPeriodKey) ||
+    visiblePeriods[0];
 
   return (
     <section
       id="grafik-bulanan"
-      className="bg-white border border-slate-200 rounded-xl p-6 space-y-5"
+      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 space-y-5"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Grafik Batang Bulanan per Siklus
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Pantau perbandingan saldo awal, saldo akhir, pemasukan, dan pengeluaran tiap periode
           </p>
         </div>
 
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setMode('balances')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               mode === 'balances'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Saldo Awal vs Akhir
@@ -119,8 +133,8 @@ export function MonthlyBarChart({
             onClick={() => setMode('cashflow')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               mode === 'cashflow'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Pemasukan vs Pengeluaran
@@ -130,8 +144,8 @@ export function MonthlyBarChart({
             onClick={() => setMode('all')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
               mode === 'all'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Semua Metrik
@@ -139,11 +153,10 @@ export function MonthlyBarChart({
         </div>
       </div>
 
-      {/* Legend + Active Period Inspector */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-4">
           {seriesConfig.map((s) => (
-            <div key={s.key} className="inline-flex items-center gap-2 text-slate-700 font-medium">
+            <div key={s.key} className="inline-flex items-center gap-2 text-slate-700 dark:text-slate-200 font-medium">
               <span
                 className="w-3 h-3 rounded-xs shrink-0"
                 style={{ backgroundColor: s.color }}
@@ -153,12 +166,11 @@ export function MonthlyBarChart({
             </div>
           ))}
         </div>
-        <span className="text-slate-500">
-          Klik batang periode untuk memfilter daftar transaksi
+        <span className="text-slate-500 dark:text-slate-400">
+          Klik batang periode untuk memilih siklus
         </span>
       </div>
 
-      {/* Interactive Chart Viewport */}
       <div className="relative w-full overflow-x-auto">
         <svg
           viewBox={`0 0 ${svgWidth} ${svgHeight}`}
@@ -166,7 +178,6 @@ export function MonthlyBarChart({
           role="img"
           aria-label="Grafik batang bulanan cash flow per siklus tanggal 25"
         >
-          {/* Gridlines & Y Axis Ticks */}
           {yTicks.map((tickVal, idx) => {
             const y = yForValue(tickVal);
             const isZero = Math.abs(tickVal) < 1;
@@ -177,7 +188,15 @@ export function MonthlyBarChart({
                   y1={y}
                   x2={svgWidth - padRight}
                   y2={y}
-                  stroke={isZero ? '#94A3B8' : '#E2E8F0'}
+                  stroke={
+                    isZero
+                      ? isDark
+                        ? '#475569'
+                        : '#94A3B8'
+                      : isDark
+                        ? '#1E293B'
+                        : '#E2E8F0'
+                  }
                   strokeWidth={isZero ? 1.2 : 1}
                   strokeDasharray={isZero ? undefined : '3 3'}
                 />
@@ -185,7 +204,7 @@ export function MonthlyBarChart({
                   x={padLeft - 10}
                   y={y + 4}
                   textAnchor="end"
-                  className="fill-slate-500 text-[10px] font-mono tabular-nums"
+                  className="fill-slate-500 dark:fill-slate-400 text-[10px] font-mono tabular-nums"
                 >
                   {formatCompactIDR(tickVal)}
                 </text>
@@ -193,7 +212,6 @@ export function MonthlyBarChart({
             );
           })}
 
-          {/* Period Bar Groups */}
           {visiblePeriods.map((period, pIdx) => {
             const groupX = padLeft + pIdx * groupWidth;
             const isSelected = selectedPeriodKey === period.periodKey;
@@ -207,25 +225,38 @@ export function MonthlyBarChart({
               (usableWidth - gap * (seriesConfig.length - 1)) / seriesConfig.length
             );
 
+            const columnFill = isSelected
+              ? isDark
+                ? '#1E293B'
+                : '#F1F5F9'
+              : isHovered
+                ? isDark
+                  ? '#0F172A'
+                  : '#F8FAFC'
+                : 'transparent';
+
+            const columnStroke = isSelected
+              ? isDark
+                ? '#334155'
+                : '#CBD5E1'
+              : 'transparent';
+
             return (
               <g
                 key={period.periodKey}
                 className="cursor-pointer"
                 onMouseEnter={() => setHoveredPeriod(period)}
                 onMouseLeave={() => setHoveredPeriod(null)}
-                onClick={() =>
-                  onSelectPeriod(isSelected ? null : period.periodKey)
-                }
+                onClick={() => onSelectPeriod(isSelected ? null : period.periodKey)}
               >
-                {/* Hover/Selection Column Backdrop */}
                 <rect
                   x={groupX + 2}
                   y={padTop}
                   width={Math.max(4, groupWidth - 4)}
                   height={plotHeight}
                   rx={6}
-                  fill={isSelected ? '#F1F5F9' : isHovered ? '#F8FAFC' : 'transparent'}
-                  stroke={isSelected ? '#CBD5E1' : 'transparent'}
+                  fill={columnFill}
+                  stroke={columnStroke}
                   strokeWidth={1}
                 />
 
@@ -250,13 +281,14 @@ export function MonthlyBarChart({
                   );
                 })}
 
-                {/* X-Axis Period Label */}
                 <text
                   x={groupX + groupWidth / 2}
                   y={svgHeight - 20}
                   textAnchor="middle"
                   className={`text-[10px] font-medium ${
-                    isSelected ? 'fill-slate-900 font-semibold' : 'fill-slate-500'
+                    isSelected
+                      ? 'fill-slate-900 dark:fill-slate-100 font-semibold'
+                      : 'fill-slate-500 dark:fill-slate-400'
                   }`}
                 >
                   {period.shortLabel}
@@ -267,52 +299,53 @@ export function MonthlyBarChart({
         </svg>
       </div>
 
-      {/* Live Inspection Strip below chart (prevents clipped tooltips) */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-4 text-xs">
-        {(() => {
-          const active =
-            hoveredPeriod ||
-            visiblePeriods.find((p) => p.periodKey === selectedPeriodKey) ||
-            visiblePeriods[0];
-          if (!active) return null;
-          return (
-            <>
-              <div className="font-semibold text-slate-900">
-                {active.label}
-                <span className="font-normal text-slate-500 ml-2">
-                  ({active.transactionCount} transaksi)
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-5 font-mono tabular-nums">
-                <div>
-                  <span className="font-sans text-slate-500 mr-1.5">Saldo Awal:</span>
-                  <span className="font-semibold text-slate-700">
-                    {formatIDR(active.openingBalance)}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-sans text-slate-500 mr-1.5">Pemasukan:</span>
-                  <span className="font-semibold text-emerald-700">
-                    +{formatIDR(active.totalIncome)}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-sans text-slate-500 mr-1.5">Pengeluaran:</span>
-                  <span className="font-semibold text-red-700">
-                    -{formatIDR(active.totalExpense)}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-sans text-slate-500 mr-1.5">Saldo Akhir:</span>
-                  <span className="font-bold text-slate-900">
-                    {formatIDR(active.closingBalance)}
-                  </span>
-                </div>
-              </div>
-            </>
-          );
-        })()}
-      </div>
+      {activePeriod && (
+        <div className="bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-4 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">
+              {activePeriod.label}
+              <span className="font-normal text-slate-500 dark:text-slate-400 ml-2">
+                ({activePeriod.transactionCount} transaksi)
+              </span>
+            </span>
+            {onViewPeriodTransactions && (
+              <button
+                type="button"
+                onClick={() => onViewPeriodTransactions(activePeriod.periodKey)}
+                className="text-xs font-medium text-slate-800 dark:text-sky-400 underline underline-offset-4 hover:opacity-80 cursor-pointer"
+              >
+                Buka Transaksi Periode Ini
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-5 font-mono tabular-nums">
+            <div>
+              <span className="font-sans text-slate-500 dark:text-slate-400 mr-1.5">Saldo Awal:</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {formatIDR(activePeriod.openingBalance)}
+              </span>
+            </div>
+            <div>
+              <span className="font-sans text-slate-500 dark:text-slate-400 mr-1.5">Pemasukan:</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                +{formatIDR(activePeriod.totalIncome)}
+              </span>
+            </div>
+            <div>
+              <span className="font-sans text-slate-500 dark:text-slate-400 mr-1.5">Pengeluaran:</span>
+              <span className="font-semibold text-red-700 dark:text-red-400">
+                -{formatIDR(activePeriod.totalExpense)}
+              </span>
+            </div>
+            <div>
+              <span className="font-sans text-slate-500 dark:text-slate-400 mr-1.5">Saldo Akhir:</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {formatIDR(activePeriod.closingBalance)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

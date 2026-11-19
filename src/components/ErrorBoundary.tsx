@@ -49,24 +49,26 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       }
 
       return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-          <div className="max-w-lg w-full bg-white border border-slate-200 rounded-xl p-6 space-y-4">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
+          <div className="max-w-lg w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg shrink-0">
+              <div className="p-2.5 bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 rounded-lg shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Terjadi Gangguan Koneksi Data
                 </h2>
-                <p className="text-sm text-slate-600 leading-relaxed">{friendlyMessage}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {friendlyMessage}
+                </p>
               </div>
             </div>
             <div className="pt-2 flex justify-end">
               <button
                 type="button"
                 onClick={this.handleReset}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 rounded-lg hover:bg-slate-800 dark:hover:bg-white transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" />
                 Muat Ulang Aplikasi

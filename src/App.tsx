@@ -4,8 +4,10 @@ import {
   LayoutGrid,
   ListOrdered,
   LogOut,
+  Moon,
   Plus,
   PlusCircle,
+  Sun,
 } from 'lucide-react';
 import { MonthlyBarChart } from './components/MonthlyBarChart';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -14,10 +16,14 @@ import { SummaryTable } from './components/SummaryTable';
 import { TransactionForm } from './components/TransactionForm';
 import { TransactionLedger } from './components/TransactionLedger';
 import { useCashFlowStore, type TransactionInput } from './hooks/useCashFlowStore';
+import { useTheme } from './hooks/useTheme';
 import type { CashFlowTransaction } from './types/cashflow';
-import { buildPeriodHorizon, formatIDR } from './utils/cashflowPeriods';
+import { buildPeriodHorizon, formatDateID, formatIDR } from './utils/cashflowPeriods';
+
+type ActiveWindow = 'ringkasan' | 'input' | 'grafik' | 'transaksi';
 
 export default function App() {
+  const { isDark, toggleTheme } = useTheme();
   const {
     user,
     authReady,
@@ -34,6 +40,7 @@ export default function App() {
     updateBalanceSettings,
   } = useCashFlowStore();
 
+  const [activeWindow, setActiveWindow] = useState<ActiveWindow>('ringkasan');
   const [selectedPeriodKey, setSelectedPeriodKey] = useState<string | null>(null);
   const [editingTransaction, setEditingTransaction] =
     useState<CashFlowTransaction | null>(null);
@@ -103,6 +110,8 @@ export default function App() {
     };
   }, [periods, selectedPeriodKey, activeSettings.baseOpeningBalance]);
 
+  const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
+
   const handleSubmitTransaction = async (
     input: TransactionInput,
     editingId?: string
@@ -116,63 +125,78 @@ export default function App() {
 
   const handleEditSelect = (tx: CashFlowTransaction) => {
     setEditingTransaction(tx);
-    const el = document.getElementById('input-transaksi');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveWindow('input');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const scrollToSection = (sectionId: string) => {
-    const el = document.getElementById(sectionId);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleSwitchWindow = (target: ActiveWindow) => {
+    setActiveWindow(target);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const handleOpenPeriodTransactions = (periodKey: string) => {
+    setSelectedPeriodKey(periodKey);
+    handleSwitchWindow('transaksi');
+  };
+
+  const navItems: Array<{ id: ActiveWindow; label: string }> = [
+    { id: 'ringkasan', label: 'Ringkasan' },
+    { id: 'input', label: 'Input' },
+    { id: 'grafik', label: 'Grafik Bulanan' },
+    { id: 'transaksi', label: 'Transaksi' },
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
       {/* Top Bar Contract: Exactly 3 zones separated by gap-8 */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 h-14 md:h-16 flex items-center justify-between gap-8">
-          <a
-            href="#top"
-            className="font-display text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0"
+          <button
+            type="button"
+            onClick={() => handleSwitchWindow('ringkasan')}
+            className="font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap shrink-0 cursor-pointer"
           >
             KasSiklus
-          </a>
+          </button>
 
-          <nav
-            aria-label="Navigasi utama"
-            className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600"
-          >
-            <a
-              href="#ringkasan"
-              className="hover:text-slate-900 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
+          {user ? (
+            <nav
+              aria-label="Navigasi menu utama"
+              className="hidden md:flex items-center gap-6 text-sm font-medium"
             >
-              Ringkasan
-            </a>
-            <a
-              href="#grafik-bulanan"
-              className="hover:text-slate-900 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
-            >
-              Grafik Bulanan
-            </a>
-            <a
-              href="#tabel-ringkasan"
-              className="hover:text-slate-900 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
-            >
-              Tabel Periode
-            </a>
-            <a
-              href="#daftar-transaksi"
-              className="hover:text-slate-900 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
-            >
-              Transaksi
-            </a>
-          </nav>
+              {navItems.map((item) => {
+                const isActive = activeWindow === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSwitchWindow(item.id)}
+                    className={`py-5 border-b-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                      isActive
+                        ? 'border-slate-900 dark:border-white text-slate-900 dark:text-white font-semibold'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
+          ) : (
+            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500 dark:text-slate-400">
+              <span className="whitespace-nowrap shrink-0">Siklus Tanggal 25</span>
+              <span className="whitespace-nowrap shrink-0">Cloud Firestore</span>
+              <span className="whitespace-nowrap shrink-0">Grafik Bulanan</span>
+              <span className="whitespace-nowrap shrink-0">PWA Seluler</span>
+            </div>
+          )}
 
           <div className="shrink-0">
             {user ? (
               <button
                 type="button"
-                onClick={() => scrollToSection('input-transaksi')}
-                className="inline-flex items-center gap-1.5 min-h-[40px] px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                onClick={() => handleSwitchWindow('input')}
+                className="inline-flex items-center gap-1.5 min-h-[40px] px-4 py-2 text-xs font-semibold text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Catat Transaksi
@@ -182,7 +206,7 @@ export default function App() {
                 type="button"
                 disabled={!authReady || authLoading}
                 onClick={() => void signInWithGoogle()}
-                className="min-h-[40px] px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
+                className="min-h-[40px] px-4 py-2 text-xs font-semibold text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 {authLoading ? 'Menghubungkan...' : 'Masuk dengan Google'}
               </button>
@@ -193,38 +217,45 @@ export default function App() {
 
       <OfflineIndicator />
 
-      <main
-        id="top"
-        className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20 md:pb-8 space-y-6"
-      >
+      <main className="flex-1 max-w-[1280px] w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-20 md:pb-8 space-y-6">
         {!authReady ? (
           <div className="space-y-6 animate-pulse">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[0, 1, 2, 3].map((idx) => (
                 <div
                   key={idx}
-                  className="h-24 bg-white border border-slate-200 rounded-xl"
+                  className="h-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl"
                 />
               ))}
             </div>
-            <div className="h-96 bg-white border border-slate-200 rounded-xl" />
+            <div className="h-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl" />
           </div>
         ) : !user ? (
-          /* Unauthenticated Landing / Sign-In Workspace Gate */
-          <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          /* Unauthenticated Welcome / Sign-In Gate */
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-8 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-7 space-y-5">
-              <div className="text-xs font-medium text-slate-500">
-                Siklus Tanggal 25 · Firestore Database · PWA Siap Instal
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Siklus Tanggal 25 · Firestore Database · PWA Siap Instal
+                </span>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                >
+                  {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                  {isDark ? 'Mode Terang' : 'Mode Gelap'}
+                </button>
               </div>
-              <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 text-balance">
+              <h1 className="font-display text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white text-balance">
                 Kelola Arus Kas Periode 25 November – 25 Desember dan Siklus Berikutnya
               </h1>
-              <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
+              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
                 Catat pemasukan dan pengeluaran harian langsung dari HP atau desktop, dan pantau carry-over saldo awal hingga saldo akhir antar periode secara otomatis di Firestore.
               </p>
 
               {authError && (
-                <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <p className="text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">
                   {authError}
                 </p>
               )}
@@ -234,7 +265,7 @@ export default function App() {
                   type="button"
                   disabled={authLoading}
                   onClick={() => void signInWithGoogle()}
-                  className="min-h-[44px] px-5 py-3 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                  className="min-h-[44px] px-5 py-3 text-sm font-semibold text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {authLoading ? 'Membuka Google Sign-In...' : 'Masuk dengan Google untuk Mulai'}
                 </button>
@@ -242,40 +273,43 @@ export default function App() {
               </div>
             </div>
 
-            <div className="lg:col-span-5 bg-slate-50 border border-slate-200 rounded-xl p-6 space-y-4">
-              <h2 className="text-sm font-semibold text-slate-900">
+            <div className="lg:col-span-5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-4">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 Pola Siklus Otomatis Tanggal {activeSettings.cutoffDay}
               </h2>
-              <div className="divide-y divide-slate-200 text-xs">
+              <div className="divide-y divide-slate-200 dark:divide-slate-700 text-xs">
                 <div className="py-2.5 flex items-center justify-between">
-                  <span className="font-medium text-slate-700">Periode 1</span>
-                  <span className="font-mono text-slate-600">25 Nov – 24 Des 2026</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Periode 1</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-400">25 Nov – 24 Des 2026</span>
                 </div>
                 <div className="py-2.5 flex items-center justify-between">
-                  <span className="font-medium text-slate-700">Periode 2</span>
-                  <span className="font-mono text-slate-600">25 Des &apos;26 – 24 Jan &apos;27</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Periode 2</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-400">25 Des &apos;26 – 24 Jan &apos;27</span>
                 </div>
                 <div className="py-2.5 flex items-center justify-between">
-                  <span className="font-medium text-slate-700">Periode 3</span>
-                  <span className="font-mono text-slate-600">25 Jan – 24 Feb 2027</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Periode 3</span>
+                  <span className="font-mono text-slate-600 dark:text-slate-400">25 Jan – 24 Feb 2027</span>
                 </div>
                 <div className="py-2.5 flex items-center justify-between">
-                  <span className="font-medium text-slate-700">Carry-over Saldo</span>
-                  <span className="text-slate-600">Saldo Akhir &rarr; Saldo Awal</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Carry-over Saldo</span>
+                  <span className="text-slate-600 dark:text-slate-400">Saldo Akhir &rarr; Saldo Awal</span>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          /* Authenticated Cash Flow Workspace */
+          /* Authenticated Multi-Window Cash Flow Workspace */
           <>
             {/* Workspace Context Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
               <div>
-                <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                  Dasbor Cash Flow Siklus Tanggal {activeSettings.cutoffDay}
+                <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  {activeWindow === 'ringkasan' && `Ringkasan Cash Flow Siklus Tanggal ${activeSettings.cutoffDay}`}
+                  {activeWindow === 'input' && 'Input Pemasukan & Pengeluaran'}
+                  {activeWindow === 'grafik' && 'Grafik Batang Bulanan per Siklus'}
+                  {activeWindow === 'transaksi' && 'Daftar Transaksi Firestore'}
                 </h1>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
                   <span>{user.displayName || user.email}</span>
                   <span aria-hidden="true">·</span>
                   <span>Firestore aktif</span>
@@ -285,11 +319,20 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  aria-label={isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
+                  className="inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                  <span>{isDark ? 'Terang' : 'Gelap'}</span>
+                </button>
                 <PWAInstallButton />
                 <button
                   type="button"
                   onClick={() => void signOutUser()}
-                  className="inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Keluar
@@ -299,155 +342,266 @@ export default function App() {
 
             {dataLoading ? (
               <div className="space-y-6 animate-pulse">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {[0, 1, 2, 3].map((idx) => (
                     <div
                       key={idx}
-                      className="h-24 bg-white border border-slate-200 rounded-xl"
+                      className="h-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl"
                     />
                   ))}
                 </div>
-                <div className="h-80 bg-white border border-slate-200 rounded-xl" />
+                <div className="h-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl" />
               </div>
             ) : (
               <>
-                {/* 4-Column KPI Summary Strip */}
-                <section
-                  id="ringkasan"
-                  className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
-                >
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-1.5">
-                    <div className="text-xs font-medium text-slate-500">
-                      Total Saldo Awal
-                    </div>
-                    <div className="font-mono tabular-nums text-base sm:text-xl font-bold text-slate-900 truncate">
-                      {formatIDR(kpiMetrics.openingBalance)}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      {selectedPeriodKey
-                        ? 'Carry-over periode terpilih'
-                        : 'Saldo awal dasar'}
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-1.5">
-                    <div className="text-xs font-medium text-slate-500">
-                      Total Pemasukan
-                    </div>
-                    <div className="font-mono tabular-nums text-base sm:text-xl font-bold text-emerald-700 truncate">
-                      +{formatIDR(kpiMetrics.totalIncome)}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Akumulasi masuk
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-1.5">
-                    <div className="text-xs font-medium text-slate-500">
-                      Total Pengeluaran
-                    </div>
-                    <div className="font-mono tabular-nums text-base sm:text-xl font-bold text-red-700 truncate">
-                      -{formatIDR(kpiMetrics.totalExpense)}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Akumulasi keluar
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-1.5">
-                    <div className="text-xs font-medium text-slate-500">
-                      Saldo Akhir
-                    </div>
-                    <div
-                      className={`font-mono tabular-nums text-base sm:text-xl font-bold truncate ${
-                        kpiMetrics.closingBalance < 0 ? 'text-red-700' : 'text-slate-900'
-                      }`}
+                {/* WINDOW 1: RINGKASAN (KPI Cards + Summary Table) */}
+                {activeWindow === 'ringkasan' && (
+                  <div className="space-y-6">
+                    <section
+                      id="ringkasan"
+                      className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
                     >
-                      {formatIDR(kpiMetrics.closingBalance)}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Awal + Masuk - Keluar
-                    </div>
-                  </div>
-                </section>
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-1.5">
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Total Saldo Awal
+                        </div>
+                        <div className="font-mono tabular-nums text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate">
+                          {formatIDR(kpiMetrics.openingBalance)}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {selectedPeriodKey
+                            ? 'Carry-over periode terpilih'
+                            : 'Saldo awal dasar'}
+                        </div>
+                      </div>
 
-                {/* Primary Workspace Split: Transaction Form + Monthly Bar Chart */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                  <div className="lg:col-span-4">
-                    <TransactionForm
-                      settings={activeSettings}
-                      editingTransaction={editingTransaction}
-                      onCancelEdit={() => setEditingTransaction(null)}
-                      onSubmitTransaction={handleSubmitTransaction}
-                      onSaveBalanceSettings={updateBalanceSettings}
-                    />
-                  </div>
-                  <div className="lg:col-span-8">
-                    <MonthlyBarChart
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-1.5">
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Total Pemasukan
+                        </div>
+                        <div className="font-mono tabular-nums text-base sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 truncate">
+                          +{formatIDR(kpiMetrics.totalIncome)}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          Akumulasi masuk
+                        </div>
+                      </div>
+
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-1.5">
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Total Pengeluaran
+                        </div>
+                        <div className="font-mono tabular-nums text-base sm:text-xl font-bold text-red-700 dark:text-red-400 truncate">
+                          -{formatIDR(kpiMetrics.totalExpense)}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          Akumulasi keluar
+                        </div>
+                      </div>
+
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 space-y-1.5">
+                        <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Saldo Akhir
+                        </div>
+                        <div
+                          className={`font-mono tabular-nums text-base sm:text-xl font-bold truncate ${
+                            kpiMetrics.closingBalance < 0
+                              ? 'text-red-700 dark:text-red-400'
+                              : 'text-slate-900 dark:text-white'
+                          }`}
+                        >
+                          {formatIDR(kpiMetrics.closingBalance)}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          Awal + Masuk - Keluar
+                        </div>
+                      </div>
+                    </section>
+
+                    <SummaryTable
                       periods={periods}
                       selectedPeriodKey={selectedPeriodKey}
                       onSelectPeriod={setSelectedPeriodKey}
+                      onOpenTransactions={handleOpenPeriodTransactions}
                     />
                   </div>
-                </div>
+                )}
 
-                {/* Period Summary Table */}
-                <SummaryTable
-                  periods={periods}
-                  selectedPeriodKey={selectedPeriodKey}
-                  onSelectPeriod={setSelectedPeriodKey}
-                />
+                {/* WINDOW 2: INPUT (Transaction Form + Quick Balance & Recent 5 Preview) */}
+                {activeWindow === 'input' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div className="lg:col-span-7">
+                      <TransactionForm
+                        settings={activeSettings}
+                        editingTransaction={editingTransaction}
+                        onCancelEdit={() => setEditingTransaction(null)}
+                        onSubmitTransaction={handleSubmitTransaction}
+                        onSaveBalanceSettings={updateBalanceSettings}
+                      />
+                    </div>
 
-                {/* Firestore Transaction Ledger */}
-                <TransactionLedger
-                  transactions={transactions}
-                  periods={periods}
-                  cutoffDay={activeSettings.cutoffDay}
-                  selectedPeriodKey={selectedPeriodKey}
-                  onSelectPeriod={setSelectedPeriodKey}
-                  onEditTransaction={handleEditSelect}
-                  onDeleteTransaction={deleteTransaction}
-                />
+                    <aside className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 space-y-5">
+                      <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex items-center justify-between gap-2">
+                        <div>
+                          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                            Status Saldo &amp; Entri Terakhir
+                          </h2>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Pembaruan otomatis ke Firestore
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchWindow('transaksi')}
+                          className="text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white underline underline-offset-4 cursor-pointer whitespace-nowrap shrink-0"
+                        >
+                          Semua ({transactions.length})
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg p-3.5">
+                        <div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Saldo Awal Dasar
+                          </div>
+                          <div className="font-mono tabular-nums text-sm font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                            {formatIDR(activeSettings.baseOpeningBalance)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Saldo Akhir Terkini
+                          </div>
+                          <div
+                            className={`font-mono tabular-nums text-sm font-bold mt-0.5 ${
+                              kpiMetrics.closingBalance < 0
+                                ? 'text-red-700 dark:text-red-400'
+                                : 'text-slate-900 dark:text-white'
+                            }`}
+                          >
+                            {formatIDR(kpiMetrics.closingBalance)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {recentTransactions.length === 0 ? (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 py-4 text-center">
+                          Belum ada transaksi tercatat. Isi formulir di samping untuk memulai.
+                        </p>
+                      ) : (
+                        <ul className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+                          {recentTransactions.map((tx) => (
+                            <li
+                              key={tx.id}
+                              onClick={() => handleEditSelect(tx)}
+                              className="py-2.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 px-2 -mx-2 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <div className="min-w-0">
+                                <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                                  {tx.description}
+                                </div>
+                                <div className="text-slate-500 dark:text-slate-400 mt-0.5">
+                                  {formatDateID(tx.date)} · {tx.category}
+                                </div>
+                              </div>
+                              <div
+                                className={`font-mono tabular-nums font-semibold whitespace-nowrap shrink-0 ${
+                                  tx.type === 'income'
+                                    ? 'text-emerald-700 dark:text-emerald-400'
+                                    : 'text-red-700 dark:text-red-400'
+                                }`}
+                              >
+                                {tx.type === 'income' ? '+' : '-'}
+                                {formatIDR(tx.amount)}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </aside>
+                  </div>
+                )}
+
+                {/* WINDOW 3: GRAFIK BULANAN */}
+                {activeWindow === 'grafik' && (
+                  <MonthlyBarChart
+                    periods={periods}
+                    selectedPeriodKey={selectedPeriodKey}
+                    isDark={isDark}
+                    onSelectPeriod={setSelectedPeriodKey}
+                    onViewPeriodTransactions={handleOpenPeriodTransactions}
+                  />
+                )}
+
+                {/* WINDOW 4: TRANSAKSI */}
+                {activeWindow === 'transaksi' && (
+                  <TransactionLedger
+                    transactions={transactions}
+                    periods={periods}
+                    cutoffDay={activeSettings.cutoffDay}
+                    selectedPeriodKey={selectedPeriodKey}
+                    onSelectPeriod={setSelectedPeriodKey}
+                    onEditTransaction={handleEditSelect}
+                    onDeleteTransaction={deleteTransaction}
+                    onGoToInput={() => handleSwitchWindow('input')}
+                  />
+                )}
               </>
             )}
           </>
         )}
       </main>
 
-      {/* Mobile Bottom Navigation Bar (thumb zone, compact 56px height) */}
+      {/* Mobile Bottom Navigation Bar (4 separate menu windows, 56px height) */}
       {user && (
         <nav
-          aria-label="Navigasi cepat seluler"
-          className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-14 bg-white/95 backdrop-blur-md border-t border-slate-200 grid grid-cols-4 items-center"
+          aria-label="Navigasi menu seluler"
+          className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 grid grid-cols-4 items-center"
         >
           <button
             type="button"
-            onClick={() => scrollToSection('ringkasan')}
-            className="h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-700 hover:text-slate-900 cursor-pointer"
+            onClick={() => handleSwitchWindow('ringkasan')}
+            className={`h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] cursor-pointer transition-colors ${
+              activeWindow === 'ringkasan'
+                ? 'text-slate-900 dark:text-white font-semibold'
+                : 'text-slate-500 dark:text-slate-400 font-medium'
+            }`}
           >
             <LayoutGrid className="w-4 h-4" />
             <span>Ringkasan</span>
           </button>
           <button
             type="button"
-            onClick={() => scrollToSection('input-transaksi')}
-            className="h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-700 hover:text-slate-900 cursor-pointer"
+            onClick={() => handleSwitchWindow('input')}
+            className={`h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] cursor-pointer transition-colors ${
+              activeWindow === 'input'
+                ? 'text-slate-900 dark:text-white font-semibold'
+                : 'text-slate-500 dark:text-slate-400 font-medium'
+            }`}
           >
             <PlusCircle className="w-4 h-4" />
             <span>Input</span>
           </button>
           <button
             type="button"
-            onClick={() => scrollToSection('grafik-bulanan')}
-            className="h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-700 hover:text-slate-900 cursor-pointer"
+            onClick={() => handleSwitchWindow('grafik')}
+            className={`h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] cursor-pointer transition-colors ${
+              activeWindow === 'grafik'
+                ? 'text-slate-900 dark:text-white font-semibold'
+                : 'text-slate-500 dark:text-slate-400 font-medium'
+            }`}
           >
             <BarChart3 className="w-4 h-4" />
             <span>Grafik</span>
           </button>
           <button
             type="button"
-            onClick={() => scrollToSection('daftar-transaksi')}
-            className="h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-700 hover:text-slate-900 cursor-pointer"
+            onClick={() => handleSwitchWindow('transaksi')}
+            className={`h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] cursor-pointer transition-colors ${
+              activeWindow === 'transaksi'
+                ? 'text-slate-900 dark:text-white font-semibold'
+                : 'text-slate-500 dark:text-slate-400 font-medium'
+            }`}
           >
             <ListOrdered className="w-4 h-4" />
             <span>Transaksi</span>
@@ -455,8 +609,8 @@ export default function App() {
         </nav>
       )}
 
-      <footer className="border-t border-slate-200 bg-white mt-12 mb-14 md:mb-0">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 mt-8 mb-14 md:mb-0">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <span>KasSiklus — Manajemen Arus Kas Siklus Tanggal 25</span>
           <span>Data tersinkronisasi real-time melalui Cloud Firestore</span>
         </div>

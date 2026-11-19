@@ -40,7 +40,6 @@ export function TransactionForm({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  // Settings panel state
   const [showSettings, setShowSettings] = useState(false);
   const [openingInput, setOpeningInput] = useState(String(settings.baseOpeningBalance));
   const [startPeriodInput, setStartPeriodInput] = useState(settings.startPeriodKey);
@@ -179,21 +178,21 @@ export function TransactionForm({
   return (
     <section
       id="input-transaksi"
-      className="bg-white border border-slate-200 rounded-xl p-6 space-y-5"
+      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 sm:p-6 space-y-5"
     >
-      <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+      <div className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             {editingTransaction ? 'Ubah Transaksi' : 'Input Pemasukan & Pengeluaran'}
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Otomatis dikelompokkan ke siklus tanggal {settings.cutoffDay}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setShowSettings((prev) => !prev)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          className="inline-flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           Atur Saldo Awal
@@ -203,16 +202,16 @@ export function TransactionForm({
       {showSettings && (
         <form
           onSubmit={handleSaveSettings}
-          className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3"
+          className="bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-lg p-4 space-y-3"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-800">
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
               Konfigurasi Saldo Awal & Siklus Periode
             </span>
             <button
               type="button"
               onClick={() => setShowSettings(false)}
-              className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 cursor-pointer"
               aria-label="Tutup pengaturan"
             >
               <X className="w-4 h-4" />
@@ -220,7 +219,7 @@ export function TransactionForm({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Saldo Awal Dasar (Rp)
               </label>
               <input
@@ -228,23 +227,23 @@ export function TransactionForm({
                 step="1"
                 value={openingInput}
                 onChange={(e) => setOpeningInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
                 placeholder="0"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Periode Mulai (YYYY-MM)
               </label>
               <input
                 type="month"
                 value={startPeriodInput}
                 onChange={(e) => setStartPeriodInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
                 Tanggal Cut-Off (1–28)
               </label>
               <input
@@ -253,18 +252,18 @@ export function TransactionForm({
                 max={28}
                 value={cutoffDayInput}
                 onChange={(e) => setCutoffDayInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
               />
             </div>
           </div>
           <div className="flex items-center justify-between gap-3 pt-1">
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-slate-500 dark:text-slate-400">
               {settingsMsg || `Saldo dasar saat ini: ${formatIDR(settings.baseOpeningBalance)}`}
             </span>
             <button
               type="submit"
               disabled={savingSettings}
-              className="px-3.5 py-1.5 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
+              className="px-3.5 py-2 text-xs font-medium text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
             >
               {savingSettings ? 'Menyimpan...' : 'Simpan Pengaturan'}
             </button>
@@ -273,14 +272,14 @@ export function TransactionForm({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-lg">
+        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
           <button
             type="button"
             onClick={() => handleTypeSwitch('income')}
-            className={`inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+            className={`inline-flex items-center justify-center gap-1.5 min-h-[40px] py-2 px-3 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
               type === 'income'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <ArrowDownLeft className="w-3.5 h-3.5" />
@@ -289,10 +288,10 @@ export function TransactionForm({
           <button
             type="button"
             onClick={() => handleTypeSwitch('expense')}
-            className={`inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
+            className={`inline-flex items-center justify-center gap-1.5 min-h-[40px] py-2 px-3 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
               type === 'expense'
-                ? 'bg-white text-red-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-900 text-red-700 dark:text-red-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -302,7 +301,7 @@ export function TransactionForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label htmlFor="tx-date" className="block text-xs font-medium text-slate-700 mb-1">
+            <label htmlFor="tx-date" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Tanggal Transaksi
             </label>
             <input
@@ -311,12 +310,12 @@ export function TransactionForm({
               required
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
             />
           </div>
 
           <div>
-            <label htmlFor="tx-amount" className="block text-xs font-medium text-slate-700 mb-1">
+            <label htmlFor="tx-amount" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Nominal (Rp)
             </label>
             <input
@@ -328,27 +327,27 @@ export function TransactionForm({
               value={amountInput}
               onChange={(e) => setAmountInput(e.target.value)}
               placeholder="Contoh: 5000000"
-              className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="w-full px-3 py-2 text-sm font-mono tabular-nums bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 px-3 py-2 rounded-lg">
+        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/70 px-3 py-2 rounded-lg">
           <span>Periode: {computedPeriodRange.label}</span>
-          <span className="font-mono tabular-nums text-slate-700">
+          <span className="font-mono tabular-nums text-slate-700 dark:text-slate-200">
             {Number.isFinite(parsedAmount) && parsedAmount > 0 ? formatIDR(parsedAmount) : 'Rp 0'}
           </span>
         </div>
 
         <div>
-          <label htmlFor="tx-category" className="block text-xs font-medium text-slate-700 mb-1">
+          <label htmlFor="tx-category" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
             Kategori
           </label>
           <select
             id="tx-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
@@ -361,7 +360,7 @@ export function TransactionForm({
 
         {category === '__custom__' && (
           <div>
-            <label htmlFor="tx-custom-cat" className="block text-xs font-medium text-slate-700 mb-1">
+            <label htmlFor="tx-custom-cat" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
               Nama Kategori Khusus
             </label>
             <input
@@ -372,13 +371,13 @@ export function TransactionForm({
               value={customCategory}
               onChange={(e) => setCustomCategory(e.target.value)}
               placeholder="Misal: Proyek Web / Pajak"
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
             />
           </div>
         )}
 
         <div>
-          <label htmlFor="tx-desc" className="block text-xs font-medium text-slate-700 mb-1">
+          <label htmlFor="tx-desc" className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
             Keterangan
           </label>
           <input
@@ -393,17 +392,17 @@ export function TransactionForm({
                 ? 'Contoh: Gaji bulanan November'
                 : 'Contoh: Bayar listrik & internet'
             }
-            className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-400"
           />
         </div>
 
         {formError && (
-          <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">
             {formError}
           </p>
         )}
         {formSuccess && (
-          <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 inline-flex items-center gap-1.5 w-full">
+          <p className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 rounded-lg px-3 py-2 inline-flex items-center gap-1.5 w-full">
             <Check className="w-3.5 h-3.5 shrink-0" />
             <span>{formSuccess}</span>
           </p>
@@ -414,7 +413,7 @@ export function TransactionForm({
             <button
               type="button"
               onClick={onCancelEdit}
-              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              className="min-h-[44px] px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
             >
               Batal
             </button>
@@ -422,7 +421,7 @@ export function TransactionForm({
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {editingTransaction ? (
               <>
@@ -430,9 +429,7 @@ export function TransactionForm({
                 {submitting ? 'Memperbarui...' : 'Perbarui Transaksi'}
               </>
             ) : (
-              <>
-                {submitting ? 'Menyimpan...' : 'Simpan Transaksi'}
-              </>
+              <>{submitting ? 'Menyimpan...' : 'Simpan Transaksi'}</>
             )}
           </button>
         </div>

@@ -9,12 +9,12 @@
     <title>KasSiklus — Cash Flow Periode 25</title>
     <meta
       name="description"
-      content="Aplikasi web manajemen arus kas siklus tanggal 25 (25 Nov – 25 Des dan seterusnya) yang terhubung ke Firestore dan repositori GitHub dengan form input, tabel ringkasan, dan grafik batang bulanan."
+      content="Aplikasi web manajemen arus kas siklus tanggal 25 (25 Nov – 25 Des dan seterusnya) yang terhubung ke Firestore dengan form input, tabel ringkasan, dan grafik batang bulanan."
     />
     <meta property="og:title" content="KasSiklus — Cash Flow Periode 25" />
     <meta
       property="og:description"
-      content="Pantau saldo awal, pemasukan, pengeluaran, dan saldo akhir per siklus tanggal 25 dengan sinkronisasi Firestore dan GitHub."
+      content="Pantau saldo awal, pemasukan, pengeluaran, dan saldo akhir per siklus tanggal 25 dengan sinkronisasi Firestore."
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -31,8 +31,19 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('kassiklus-theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (saved === 'dark' || (!saved && prefersDark)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-slate-50 text-slate-900 antialiased">
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
