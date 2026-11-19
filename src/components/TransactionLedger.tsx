@@ -8,9 +8,10 @@ interface TransactionLedgerProps {
   periods: PeriodSummary[];
   cutoffDay: number;
   selectedPeriodKey: string | null;
+  readOnly?: boolean;
   onSelectPeriod: (periodKey: string | null) => void;
-  onEditTransaction: (tx: CashFlowTransaction) => void;
-  onDeleteTransaction: (transactionId: string) => Promise<void>;
+  onEditTransaction?: (tx: CashFlowTransaction) => void;
+  onDeleteTransaction?: (transactionId: string) => Promise<void>;
   onGoToInput?: () => void;
 }
 
@@ -19,6 +20,7 @@ export function TransactionLedger({
   periods,
   cutoffDay,
   selectedPeriodKey,
+  readOnly = false,
   onSelectPeriod,
   onEditTransaction,
   onDeleteTransaction,
@@ -55,6 +57,7 @@ export function TransactionLedger({
   }, [transactions, cutoffDay, selectedPeriodKey, typeFilter, searchQuery]);
 
   const handleConfirmDelete = async (id: string) => {
+    if (!onDeleteTransaction) return;
     setDeletingId(id);
     try {
       await onDeleteTransaction(id);
@@ -130,9 +133,11 @@ export function TransactionLedger({
             Belum ada transaksi untuk filter ini
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Tambahkan pemasukan atau pengeluaran baru pada menu Input untuk mulai memantau arus kas Anda.
+            {readOnly
+              ? 'Tidak ada transaksi yang cocok dengan filter ini.'
+              : 'Tambahkan pemasukan atau pengeluaran baru pada menu Input untuk mulai memantau arus kas Anda.'}
           </p>
-          {onGoToInput && (
+          {!readOnly && onGoToInput && (
             <button
               type="button"
               onClick={onGoToInput}
@@ -152,7 +157,7 @@ export function TransactionLedger({
                 <th className="py-2.5 px-4">Keterangan &amp; Kategori</th>
                 <th className="py-2.5 px-4 whitespace-nowrap">Jenis</th>
                 <th className="py-2.5 px-4 text-right whitespace-nowrap">Nominal</th>
-                <th className="py-2.5 px-4 text-right whitespace-nowrap">Aksi</th>
+                {!readOnly && <th className="py-2.5 px-4 text-right whitespace-nowrap">Aksi</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
@@ -194,46 +199,52 @@ export function TransactionLedger({
                       {tx.type === 'income' ? '+' : '-'}
                       {formatIDR(tx.amount)}
                     </td>
-                    <td className="py-2.5 px-4 text-right whitespace-nowrap">
-                      {isConfirming ? (
-                        <div className="inline-flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            disabled={deletingId === tx.id}
-                            onClick={() => void handleConfirmDelete(tx.id)}
-                            className="px-2 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded cursor-pointer"
-                          >
-                            {deletingId === tx.id ? '...' : 'Hapus'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
-                          >
-                            Batal
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => onEditTransaction(tx)}
-                            className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                            aria-label={`Ubah ${tx.description}`}
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(tx.id)}
-                            className="p-2 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
-                            aria-label={`Hapus ${tx.description}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </td>
+                    {!readOnly && (
+                      <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                        {isConfirming ? (
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={deletingId === tx.id}
+                              onClick={() => void handleConfirmDelete(tx.id)}
+                              className="px-2 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded cursor-pointer"
+                            >
+                              {deletingId === tx.id ? '...' : 'Hapus'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2 py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1">
+                            {onEditTransaction && (
+                              <button
+                                type="button"
+                                onClick={() => onEditTransaction(tx)}
+                                className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                aria-label={`Ubah ${tx.description}`}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {onDeleteTransaction && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteId(tx.id)}
+                                className="p-2 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                                aria-label={`Hapus ${tx.description}`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

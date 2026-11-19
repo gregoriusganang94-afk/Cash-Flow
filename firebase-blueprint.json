@@ -110,6 +110,64 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "ShareSnapshot": {
+      "title": "ShareSnapshot",
+      "description": "Public read-only snapshot of a user's cash flow accessible via an unguessable capability token.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Owner Firebase Auth UID."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Display title for the shared read-only cash flow report."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the read-only link is currently enabled."
+        },
+        "startPeriodKey": {
+          "type": "string",
+          "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])$",
+          "minLength": 7,
+          "maxLength": 7,
+          "description": "Starting cycle key (YYYY-MM)."
+        },
+        "cutoffDay": {
+          "type": "integer",
+          "description": "Cycle cutoff day (1-28)."
+        },
+        "transactions": {
+          "type": "array",
+          "description": "Bounded list (max 500) of sanitized cash flow transactions."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "title",
+        "active",
+        "startPeriodKey",
+        "cutoffDay",
+        "transactions",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -124,6 +182,12 @@
         "$ref": "#/entities/CashFlowTransaction"
       },
       "description": "Subcollection of income and expense transactions belonging to the user."
+    },
+    "/shares/{shareId}": {
+      "schema": {
+        "$ref": "#/entities/ShareSnapshot"
+      },
+      "description": "Read-only shareable cash flow snapshots keyed by capability token."
     }
   }
 }

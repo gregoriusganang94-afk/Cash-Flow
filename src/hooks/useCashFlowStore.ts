@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   onAuthStateChanged,
   signInWithPopup,
@@ -29,6 +29,8 @@ import {
 import {
   BLUEPRINT_LIMITS,
   type CashFlowTransaction,
+  type ShareSnapshot,
+  type ShareTransactionItem,
   type TransactionType,
   type UserSettings,
 } from '../types/cashflow';
@@ -98,6 +100,44 @@ function sanitizeTransactionPayload(
   };
 }
 
+const SHARE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+
+function generateShareToken(length = 24): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += SHARE_ALPHABET[bytes[i] % SHARE_ALPHABET.length];
+  }
+  return out;
+}
+
+function toShareTransactions(items: CashFlowTransaction[]): ShareTransactionItem[] {
+  return items.slice(0, BLUEPRINT_LIMITS.MAX_SHARE_TX_COUNT).map((tx) => ({
+    id: tx.id,
+    type: tx.type === 'income' ? 'income' : 'expense',
+    amount: Math.round(Number(tx.amount) * 100) / 100,
+    category: tx.category.trim().slice(0, BLUEPRINT_LIMITS.MAX_CATEGORY_LEN) || 'Lainnya',
+    description: tx.description.trim().slice(0, BLUEPRINT_LIMITS.MAX_DESCRIPTION_LEN) || '-',
+    date: tx.date,
+    periodKey: tx.periodKey,
+  }));
+}
+
+function buildShareSignature(
+  title: string,
+  startPeriodKey: string,
+  cutoffDay: number,
+  txs: ShareTransactionItem[]
+): string {
+  return JSON.stringify({
+    title,
+    startPeriodKey,
+    cutoffDay,
+    txs: txs.map((t) => [t.id, t.type, t.amount, t.category, t.description, t.date, t.periodKey]),
+  });
+}
+
 export function useCashFlowStore() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -106,8 +146,10 @@ export function useCashFlowStore() {
 
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [transactions, setTransactions] = useState<CashFlowTransaction[]>([]);
+  const [activeShare, setActiveShare] = useState<ShareSnapshot | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [firestoreError, setFirestoreError] = useState<Error | null>(null);
+  const lastShareSyncSigRef = useRef<string>('');
 
   if (firestoreError) {
     throw firestoreError;
@@ -120,6 +162,7 @@ export function useCashFlowStore() {
       if (!currentUser) {
         setSettings(null);
         setTransactions([]);
+        setActiveShare(null);
         setDataLoading(false);
       }
     });
@@ -134,6 +177,7 @@ export function useCashFlowStore() {
     let cancelled = false;
     let unsubSettings: (() => void) | null = null;
     let unsubTransactions: (() => void) | null = null;
+    let unsubShare: (() => void) | null = null;
 
     setDataLoading(true);
 
@@ -239,6 +283,56 @@ export function useCashFlowStore() {
           }
         }
       );
+
+      const sharesQuery = query(collection(db, 'shares'), where('userId', '==', uid));
+      unsubShare = onSnapshot(
+        sharesQuery,
+        (shareSnap) => {
+          if (shareSnap.empty) {
+            setActiveShare(null);
+            lastShareSyncSigRef.current = '';
+            return;
+          }
+          const shareDoc = shareSnap.docs[0];
+          const data = shareDoc.data();
+          const shareTxs: ShareTransactionItem[] = Array.isArray(data.transactions)
+            ? data.transactions.map((t: Record<string, unknown>) => ({
+                id: String(t.id || ''),
+                type: t.type === 'income' ? 'income' : 'expense',
+                amount: typeof t.amount === 'number' ? t.amount : Number(t.amount) || 0,
+                category: String(t.category || 'Lainnya'),
+                description: String(t.description || ''),
+                date: String(t.date || '2026-11-25'),
+                periodKey: String(t.periodKey || '2026-11'),
+              }))
+            : [];
+          const snapshot: ShareSnapshot = {
+            id: shareDoc.id,
+            userId: String(data.userId || uid),
+            title: String(data.title || 'Laporan Cash Flow KasSiklus'),
+            active: Boolean(data.active),
+            startPeriodKey: String(data.startPeriodKey || '2026-11'),
+            cutoffDay: typeof data.cutoffDay === 'number' ? data.cutoffDay : 25,
+            transactions: shareTxs,
+            createdAtMs: timestampToMs(data.createdAt),
+            updatedAtMs: timestampToMs(data.updatedAt),
+          };
+          lastShareSyncSigRef.current = buildShareSignature(
+            snapshot.title,
+            snapshot.startPeriodKey,
+            snapshot.cutoffDay,
+            snapshot.transactions
+          );
+          setActiveShare(snapshot);
+        },
+        (err) => {
+          try {
+            handleFirestoreError(err, OperationType.LIST, 'shares');
+          } catch (wrapped) {
+            setFirestoreError(wrapped instanceof Error ? wrapped : new Error(String(wrapped)));
+          }
+        }
+      );
     }
 
     void bootstrapAndSubscribe();
@@ -247,8 +341,36 @@ export function useCashFlowStore() {
       cancelled = true;
       unsubSettings?.();
       unsubTransactions?.();
+      unsubShare?.();
     };
   }, [authReady, user]);
+
+  // Keep an active read-only share snapshot synchronized automatically whenever transactions/settings change
+  useEffect(() => {
+    if (!user || !settings || !activeShare || !activeShare.active || dataLoading) return;
+
+    const shareTxs = toShareTransactions(transactions);
+    const nextSig = buildShareSignature(
+      activeShare.title,
+      settings.startPeriodKey,
+      settings.cutoffDay,
+      shareTxs
+    );
+
+    if (nextSig === lastShareSyncSigRef.current) return;
+    lastShareSyncSigRef.current = nextSig;
+
+    const shareRef = doc(db, 'shares', activeShare.id);
+    updateDoc(shareRef, {
+      title: activeShare.title,
+      startPeriodKey: settings.startPeriodKey,
+      cutoffDay: settings.cutoffDay,
+      transactions: shareTxs,
+      updatedAt: serverTimestamp(),
+    }).catch((err) => {
+      handleFirestoreError(err, OperationType.UPDATE, `shares/${activeShare.id}`);
+    });
+  }, [user, settings, transactions, activeShare, dataLoading]);
 
   const signInWithGoogle = useCallback(async () => {
     setAuthLoading(true);
@@ -351,6 +473,115 @@ export function useCashFlowStore() {
     [user]
   );
 
+  const createOrUpdateShareLink = useCallback(
+    async (customTitle?: string): Promise<ShareSnapshot> => {
+      if (!user) throw new Error('Silakan masuk terlebih dahulu.');
+      const effectiveSettings = settings || DEFAULT_SETTINGS(user.uid);
+      const cleanTitle =
+        (customTitle ?? activeShare?.title ?? 'Laporan Cash Flow KasSiklus')
+          .trim()
+          .slice(0, BLUEPRINT_LIMITS.MAX_SHARE_TITLE_LEN) || 'Laporan Cash Flow KasSiklus';
+      const shareTxs = toShareTransactions(transactions);
+
+      if (activeShare) {
+        const shareRef = doc(db, 'shares', activeShare.id);
+        try {
+          lastShareSyncSigRef.current = buildShareSignature(
+            cleanTitle,
+            effectiveSettings.startPeriodKey,
+            effectiveSettings.cutoffDay,
+            shareTxs
+          );
+          await updateDoc(shareRef, {
+            title: cleanTitle,
+            startPeriodKey: effectiveSettings.startPeriodKey,
+            cutoffDay: effectiveSettings.cutoffDay,
+            transactions: shareTxs,
+            updatedAt: serverTimestamp(),
+          });
+          if (!activeShare.active) {
+            await updateDoc(shareRef, {
+              active: true,
+              updatedAt: serverTimestamp(),
+            });
+          }
+          return {
+            ...activeShare,
+            title: cleanTitle,
+            active: true,
+            startPeriodKey: effectiveSettings.startPeriodKey,
+            cutoffDay: effectiveSettings.cutoffDay,
+            transactions: shareTxs,
+            updatedAtMs: Date.now(),
+          };
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, `shares/${activeShare.id}`);
+        }
+      }
+
+      const shareId = generateShareToken(24);
+      const shareRef = doc(db, 'shares', shareId);
+      try {
+        lastShareSyncSigRef.current = buildShareSignature(
+          cleanTitle,
+          effectiveSettings.startPeriodKey,
+          effectiveSettings.cutoffDay,
+          shareTxs
+        );
+        await setDoc(shareRef, {
+          userId: user.uid,
+          title: cleanTitle,
+          active: true,
+          startPeriodKey: effectiveSettings.startPeriodKey,
+          cutoffDay: effectiveSettings.cutoffDay,
+          transactions: shareTxs,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        return {
+          id: shareId,
+          userId: user.uid,
+          title: cleanTitle,
+          active: true,
+          startPeriodKey: effectiveSettings.startPeriodKey,
+          cutoffDay: effectiveSettings.cutoffDay,
+          transactions: shareTxs,
+          createdAtMs: Date.now(),
+          updatedAtMs: Date.now(),
+        };
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `shares/${shareId}`);
+      }
+    },
+    [user, settings, transactions, activeShare]
+  );
+
+  const toggleShareActive = useCallback(
+    async (nextActive: boolean) => {
+      if (!user || !activeShare) return;
+      const shareRef = doc(db, 'shares', activeShare.id);
+      try {
+        await updateDoc(shareRef, {
+          active: nextActive,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `shares/${activeShare.id}`);
+      }
+    },
+    [user, activeShare]
+  );
+
+  const deleteShareLink = useCallback(async () => {
+    if (!user || !activeShare) return;
+    const shareRef = doc(db, 'shares', activeShare.id);
+    try {
+      await deleteDoc(shareRef);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `shares/${activeShare.id}`);
+    }
+  }, [user, activeShare]);
+
   return {
     user,
     authReady,
@@ -358,6 +589,7 @@ export function useCashFlowStore() {
     authError,
     settings,
     transactions,
+    activeShare,
     dataLoading,
     signInWithGoogle,
     signOutUser,
@@ -365,5 +597,8 @@ export function useCashFlowStore() {
     updateTransaction,
     deleteTransaction,
     updateCycleSettings,
+    createOrUpdateShareLink,
+    toggleShareActive,
+    deleteShareLink,
   };
 }

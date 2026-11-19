@@ -3,6 +3,8 @@ export type TransactionType = 'income' | 'expense';
 export const BLUEPRINT_LIMITS = {
   MAX_CATEGORY_LEN: 60,
   MAX_DESCRIPTION_LEN: 200,
+  MAX_SHARE_TITLE_LEN: 80,
+  MAX_SHARE_TX_COUNT: 500,
   MAX_AMOUNT: 1_000_000_000_000,
   MIN_CUTOFF_DAY: 1,
   MAX_CUTOFF_DAY: 28,
@@ -45,6 +47,28 @@ export interface CashFlowTransaction {
   description: string;
   date: string;
   periodKey: string;
+  createdAtMs: number;
+  updatedAtMs: number;
+}
+
+export interface ShareTransactionItem {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  category: string;
+  description: string;
+  date: string;
+  periodKey: string;
+}
+
+export interface ShareSnapshot {
+  id: string;
+  userId: string;
+  title: string;
+  active: boolean;
+  startPeriodKey: string;
+  cutoffDay: number;
+  transactions: ShareTransactionItem[];
   createdAtMs: number;
   updatedAtMs: number;
 }

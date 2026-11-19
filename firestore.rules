@@ -78,6 +78,55 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidShareSnapshot(data) {
+      return data.keys().hasAll(['userId', 'title', 'active', 'startPeriodKey', 'cutoffDay', 'transactions', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'title', 'active', 'startPeriodKey', 'cutoffDay', 'transactions', 'createdAt', 'updatedAt'])
+        && data.userId is string
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 80
+        && data.active is bool
+        && data.startPeriodKey is string
+        && data.startPeriodKey.size() == 7
+        && data.startPeriodKey.matches('^20[0-9]{2}-(0[1-9]|1[0-2])$')
+        && data.cutoffDay is int
+        && data.cutoffDay >= 1
+        && data.cutoffDay <= 28
+        && data.transactions is list
+        && data.transactions.size() <= 500
+        && (
+          data.transactions.size() == 0 || (
+            data.transactions[0] is map
+            && data.transactions[0].keys().hasAll(['id', 'type', 'amount', 'category', 'description', 'date', 'periodKey'])
+            && data.transactions[0].keys().hasOnly(['id', 'type', 'amount', 'category', 'description', 'date', 'periodKey'])
+            && data.transactions[0].id is string
+            && isValidId(data.transactions[0].id)
+            && data.transactions[0].type is string
+            && data.transactions[0].type.size() <= 10
+            && data.transactions[0].type in ['income', 'expense']
+            && data.transactions[0].amount is number
+            && data.transactions[0].amount > 0
+            && data.transactions[0].amount <= 1000000000000
+            && data.transactions[0].category is string
+            && data.transactions[0].category.size() >= 1
+            && data.transactions[0].category.size() <= 60
+            && data.transactions[0].description is string
+            && data.transactions[0].description.size() >= 1
+            && data.transactions[0].description.size() <= 200
+            && data.transactions[0].date is string
+            && data.transactions[0].date.size() == 10
+            && data.transactions[0].date.matches('^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+            && data.transactions[0].periodKey is string
+            && data.transactions[0].periodKey.size() == 7
+            && data.transactions[0].periodKey.matches('^20[0-9]{2}-(0[1-9]|1[0-2])$')
+          )
+        )
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // 4. Collection Rules
     match /users/{userId} {
       allow get: if isSignedIn() && isVerified() && isValidId(userId) && isOwner(userId);
@@ -138,6 +187,51 @@ service cloud.firestore {
           && isValidId(transactionId)
           && isOwner(userId);
       }
+    }
+
+    match /shares/{shareId} {
+      allow get: if isValidId(shareId)
+        && shareId.size() >= 16
+        && shareId.size() <= 64
+        && (
+          (resource != null && existing().active == true) ||
+          (isSignedIn() && isVerified() && resource != null && existing().userId == request.auth.uid)
+        );
+
+      allow list: if isSignedIn()
+        && isVerified()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && isVerified()
+        && isValidId(shareId)
+        && shareId.size() >= 16
+        && shareId.size() <= 64
+        && isValidShareSnapshot(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+
+      allow update: if isSignedIn()
+        && isVerified()
+        && isValidId(shareId)
+        && shareId.size() >= 16
+        && shareId.size() <= 64
+        && isValidShareSnapshot(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'startPeriodKey', 'cutoffDay', 'transactions', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['active', 'updatedAt'])
+        );
+
+      allow delete: if isSignedIn()
+        && isVerified()
+        && isValidId(shareId)
+        && shareId.size() >= 16
+        && shareId.size() <= 64
+        && existing().userId == request.auth.uid;
     }
   }
 }

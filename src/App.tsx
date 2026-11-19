@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   LayoutGrid,
@@ -7,11 +7,14 @@ import {
   Moon,
   Plus,
   PlusCircle,
+  Share2,
   Sun,
 } from 'lucide-react';
 import { MonthlyBarChart } from './components/MonthlyBarChart';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { ShareModal } from './components/ShareModal';
+import { SharedView } from './components/SharedView';
 import { SummaryTable } from './components/SummaryTable';
 import { TransactionForm } from './components/TransactionForm';
 import { TransactionLedger } from './components/TransactionLedger';
@@ -22,8 +25,39 @@ import { buildPeriodHorizon, formatDateID, formatIDR } from './utils/cashflowPer
 
 type ActiveWindow = 'ringkasan' | 'input' | 'grafik' | 'transaksi';
 
+function readShareParam(): string | null {
+  const param = new URLSearchParams(window.location.search).get('share');
+  return param && param.trim() ? param.trim() : null;
+}
+
 export default function App() {
   const { isDark, toggleTheme } = useTheme();
+  const [shareToken, setShareToken] = useState<string | null>(() => readShareParam());
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  useEffect(() => {
+    const onPopState = () => setShareToken(readShareParam());
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const enterSharePreview = (shareId: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('share', shareId);
+    window.history.pushState({}, '', url.toString());
+    setShareModalOpen(false);
+    setShareToken(shareId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const exitShareMode = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('share');
+    window.history.pushState({}, '', url.toString());
+    setShareToken(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const {
     user,
     authReady,
@@ -31,6 +65,7 @@ export default function App() {
     authError,
     settings,
     transactions,
+    activeShare,
     dataLoading,
     signInWithGoogle,
     signOutUser,
@@ -38,6 +73,9 @@ export default function App() {
     updateTransaction,
     deleteTransaction,
     updateCycleSettings,
+    createOrUpdateShareLink,
+    toggleShareActive,
+    deleteShareLink,
   } = useCashFlowStore();
 
   const [activeWindow, setActiveWindow] = useState<ActiveWindow>('ringkasan');
@@ -129,6 +167,17 @@ export default function App() {
     { id: 'grafik', label: 'Grafik Bulanan' },
     { id: 'transaksi', label: 'Transaksi' },
   ];
+
+  if (shareToken) {
+    return (
+      <SharedView
+        shareId={shareToken}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        onExitShareMode={exitShareMode}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors">
@@ -306,6 +355,14 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setShareModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>{activeShare?.active ? 'Bagikan (Aktif)' : 'Bagikan'}</span>
+                </button>
                 <button
                   type="button"
                   onClick={toggleTheme}
@@ -599,6 +656,17 @@ export default function App() {
           <span>Data tersinkronisasi real-time melalui Cloud Firestore</span>
         </div>
       </footer>
+
+      <ShareModal
+        isOpen={shareModalOpen}
+        activeShare={activeShare}
+        transactionCount={transactions.length}
+        onClose={() => setShareModalOpen(false)}
+        onCreateOrUpdateShare={createOrUpdateShareLink}
+        onToggleShareActive={toggleShareActive}
+        onDeleteShare={deleteShareLink}
+        onOpenPreview={enterSharePreview}
+      />
     </div>
   );
 }

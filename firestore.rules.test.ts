@@ -15,5 +15,8 @@ export const DIRTY_DOZEN_CASES = [
   { name: 'Invalid enum type blocked', path: '/users/u1/transactions/tx1', expected: 'PERMISSION_DENIED' },
   { name: 'Forged client timestamp blocked', path: '/users/u1/transactions/tx1', expected: 'PERMISSION_DENIED' },
   { name: 'Immutable createdAt/userId update blocked', path: '/users/u1/transactions/tx1', expected: 'PERMISSION_DENIED' },
-  { name: 'Oversized description (>200 chars) blocked', path: '/users/u1/transactions/tx1', expected: 'PERMISSION_DENIED' }
+  { name: 'Oversized description (>200 chars) blocked', path: '/users/u1/transactions/tx1', expected: 'PERMISSION_DENIED' },
+  { name: 'Unauthenticated list on /shares blocked', path: '/shares', expected: 'PERMISSION_DENIED' },
+  { name: 'Inactive share get blocked for viewer', path: '/shares/abcdefghijklmnop', expected: 'PERMISSION_DENIED' },
+  { name: 'Short shareId (<16 chars) create blocked', path: '/shares/shortid', expected: 'PERMISSION_DENIED' }
 ] as const;
