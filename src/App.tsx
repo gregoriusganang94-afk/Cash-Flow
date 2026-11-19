@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import {
   BarChart3,
-  GitBranch,
   LayoutGrid,
+  ListOrdered,
   LogOut,
   Plus,
   PlusCircle,
 } from 'lucide-react';
-import { GithubSyncPanel } from './components/GithubSyncPanel';
 import { MonthlyBarChart } from './components/MonthlyBarChart';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAInstallButton } from './components/PWAInstallButton';
@@ -33,8 +32,6 @@ export default function App() {
     updateTransaction,
     deleteTransaction,
     updateBalanceSettings,
-    updateGithubSettings,
-    importTransactionsBatch,
   } = useCashFlowStore();
 
   const [selectedPeriodKey, setSelectedPeriodKey] = useState<string | null>(null);
@@ -168,12 +165,6 @@ export default function App() {
             >
               Transaksi
             </a>
-            <a
-              href="#github-sync"
-              className="hover:text-slate-900 hover:underline underline-offset-4 transition-colors whitespace-nowrap shrink-0"
-            >
-              GitHub Sync
-            </a>
           </nav>
 
           <div className="shrink-0">
@@ -229,7 +220,7 @@ export default function App() {
                 Kelola Arus Kas Periode 25 November – 25 Desember dan Siklus Berikutnya
               </h1>
               <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
-                Catat pemasukan dan pengeluaran harian langsung dari HP atau desktop, pantau carry-over saldo awal hingga saldo akhir antar periode di Firestore, dan cadangkan ledger ke GitHub.
+                Catat pemasukan dan pengeluaran harian langsung dari HP atau desktop, dan pantau carry-over saldo awal hingga saldo akhir antar periode secara otomatis di Firestore.
               </p>
 
               {authError && (
@@ -288,12 +279,6 @@ export default function App() {
                   <span>{user.displayName || user.email}</span>
                   <span aria-hidden="true">·</span>
                   <span>Firestore aktif</span>
-                  <span aria-hidden="true">·</span>
-                  <span>
-                    {activeSettings.githubRepo
-                      ? `Repo: ${activeSettings.githubRepo}`
-                      : 'Repo GitHub belum ditautkan'}
-                  </span>
                   <span aria-hidden="true">·</span>
                   <span>Cakupan: {kpiMetrics.scopeLabel}</span>
                 </div>
@@ -423,15 +408,6 @@ export default function App() {
                   onEditTransaction={handleEditSelect}
                   onDeleteTransaction={deleteTransaction}
                 />
-
-                {/* GitHub Repository Integration Panel */}
-                <GithubSyncPanel
-                  settings={activeSettings}
-                  transactions={transactions}
-                  periods={periods}
-                  onSaveGithubSettings={updateGithubSettings}
-                  onImportTransactions={importTransactionsBatch}
-                />
               </>
             )}
           </>
@@ -470,11 +446,11 @@ export default function App() {
           </button>
           <button
             type="button"
-            onClick={() => scrollToSection('github-sync')}
+            onClick={() => scrollToSection('daftar-transaksi')}
             className="h-full min-h-[44px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-slate-700 hover:text-slate-900 cursor-pointer"
           >
-            <GitBranch className="w-4 h-4" />
-            <span>GitHub</span>
+            <ListOrdered className="w-4 h-4" />
+            <span>Transaksi</span>
           </button>
         </nav>
       )}
@@ -482,7 +458,7 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white mt-12 mb-14 md:mb-0">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
           <span>KasSiklus — Manajemen Arus Kas Siklus Tanggal 25</span>
-          <span>Data tersinkronisasi melalui Cloud Firestore &amp; GitHub API</span>
+          <span>Data tersinkronisasi real-time melalui Cloud Firestore</span>
         </div>
       </footer>
     </div>
