@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Check, Pencil, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Check, Pencil, Plus, SlidersHorizontal, X } from 'lucide-react';
 import {
   BLUEPRINT_LIMITS,
   EXPENSE_CATEGORIES,
@@ -80,10 +80,31 @@ export function TransactionForm({
   };
 
   const parsedAmount = Number(amountInput.replace(/[^\d.-]/g, ''));
+  const isDifferentAmount = Boolean(
+    editingTransaction &&
+      Number.isFinite(parsedAmount) &&
+      parsedAmount !== editingTransaction.amount
+  );
+  const isDifferentDescription = Boolean(
+    editingTransaction &&
+      description.trim() !== editingTransaction.description.trim()
+  );
+  const shouldSaveAsNew = Boolean(
+    editingTransaction && isDifferentAmount && isDifferentDescription
+  );
+
   const computedPeriodKey = BLUEPRINT_LIMITS.DATE_PATTERN.test(date)
     ? getPeriodKeyForDate(date, settings.cutoffDay)
     : settings.startPeriodKey;
   const computedPeriodRange = getPeriodRange(computedPeriodKey, settings.cutoffDay);
+
+  const handleCancelEditing = () => {
+    onCancelEdit();
+    setAmountInput('');
+    setDescription('');
+    setFormError(null);
+    setFormSuccess(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +131,9 @@ export function TransactionForm({
 
     setSubmitting(true);
     try {
+      const targetEditingId =
+        editingTransaction && !shouldSaveAsNew ? editingTransaction.id : undefined;
+
       await onSubmitTransaction(
         {
           type,
@@ -118,17 +142,25 @@ export function TransactionForm({
           description: description.trim(),
           date,
         },
-        editingTransaction?.id
+        targetEditingId
       );
 
-      if (editingTransaction) {
+      if (targetEditingId) {
         onCancelEdit();
+        setAmountInput('');
+        setDescription('');
         setFormSuccess('Transaksi berhasil diperbarui di Firestore.');
       } else {
+        const createdFromEdit = Boolean(editingTransaction && shouldSaveAsNew);
+        if (editingTransaction) {
+          onCancelEdit();
+        }
         setAmountInput('');
         setDescription('');
         setFormSuccess(
-          `${type === 'income' ? 'Pemasukan' : 'Pengeluaran'} dicatat ke periode ${computedPeriodRange.label}.`
+          createdFromEdit
+            ? `Nominal dan keterangan berbeda — disimpan sebagai transaksi baru di periode ${computedPeriodRange.label}.`
+            : `${type === 'income' ? 'Pemasukan' : 'Pengeluaran'} dicatat ke periode ${computedPeriodRange.label}.`
         );
       }
     } catch (err) {
@@ -250,6 +282,30 @@ export function TransactionForm({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {editingTransaction && (
+          <div
+            className={`text-xs rounded-lg px-3 py-2.5 border ${
+              shouldSaveAsNew
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-200'
+                : 'bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+            }`}
+          >
+            {shouldSaveAsNew ? (
+              <span>
+                Nominal dan keterangan berbeda dari data lama ({editingTransaction.description} ·{' '}
+                {formatIDR(editingTransaction.amount)}). Saat disimpan akan menjadi{' '}
+                <strong className="font-semibold">catatan baru</strong>.
+              </span>
+            ) : (
+              <span>
+                Mengedit catatan: <strong className="font-semibold">{editingTransaction.description}</strong> (
+                {formatIDR(editingTransaction.amount)}). Jika nominal dan keterangan sama-sama diubah,
+                otomatis tersimpan sebagai catatan baru.
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
           <button
             type="button"
@@ -390,7 +446,7 @@ export function TransactionForm({
           {editingTransaction && (
             <button
               type="button"
-              onClick={onCancelEdit}
+              onClick={handleCancelEditing}
               className="min-h-[44px] px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
             >
               Batal
@@ -402,10 +458,17 @@ export function TransactionForm({
             className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {editingTransaction ? (
-              <>
-                <Pencil className="w-4 h-4" />
-                {submitting ? 'Memperbarui...' : 'Perbarui Transaksi'}
-              </>
+              shouldSaveAsNew ? (
+                <>
+                  <Plus className="w-4 h-4" />
+                  {submitting ? 'Menyimpan...' : 'Simpan sebagai Data Baru'}
+                </>
+              ) : (
+                <>
+                  <Pencil className="w-4 h-4" />
+                  {submitting ? 'Memperbarui...' : 'Perbarui Transaksi'}
+                </>
+              )
             ) : (
               <>{submitting ? 'Menyimpan...' : 'Simpan Transaksi'}</>
             )}

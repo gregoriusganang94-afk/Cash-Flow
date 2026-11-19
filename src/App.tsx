@@ -179,7 +179,10 @@ export default function App() {
             {user ? (
               <button
                 type="button"
-                onClick={() => handleSwitchWindow('input')}
+                onClick={() => {
+                  setEditingTransaction(null);
+                  handleSwitchWindow('input');
+                }}
                 className="inline-flex items-center gap-1.5 min-h-[40px] px-4 py-2 text-xs font-semibold text-white dark:text-slate-900 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -521,7 +524,10 @@ export default function App() {
                     onSelectPeriod={setSelectedPeriodKey}
                     onEditTransaction={handleEditSelect}
                     onDeleteTransaction={deleteTransaction}
-                    onGoToInput={() => handleSwitchWindow('input')}
+                    onGoToInput={() => {
+                      setEditingTransaction(null);
+                      handleSwitchWindow('input');
+                    }}
                   />
                 )}
               </>
