@@ -1,0 +1,149 @@
+{
+  "entities": {
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "Cash flow base opening balance, cycle configuration, and GitHub repository metadata for a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Owner Firebase Auth UID."
+        },
+        "baseOpeningBalance": {
+          "type": "number",
+          "description": "Initial opening balance before the starting period."
+        },
+        "startPeriodKey": {
+          "type": "string",
+          "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])$",
+          "minLength": 7,
+          "maxLength": 7,
+          "description": "Starting cycle key (YYYY-MM), defaulting to 2026-11 for 25 Nov - 24 Des 2026."
+        },
+        "cutoffDay": {
+          "type": "integer",
+          "description": "Day of month when each cash flow cycle begins (default 25)."
+        },
+        "githubRepo": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Connected GitHub repository in owner/repo format."
+        },
+        "githubBranch": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Target GitHub repository branch."
+        },
+        "githubFilePath": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "File path inside the GitHub repository for ledger snapshots."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "baseOpeningBalance",
+        "startPeriodKey",
+        "cutoffDay",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CashFlowTransaction": {
+      "title": "CashFlowTransaction",
+      "description": "Individual income or expense entry assigned to a 25th-to-25th cash flow period.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 128,
+          "description": "Owner Firebase Auth UID."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["income", "expense"],
+          "maxLength": 10,
+          "description": "Transaction direction: income or expense."
+        },
+        "amount": {
+          "type": "number",
+          "description": "Positive monetary amount in IDR."
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "description": "Transaction category label."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Transaction description or note."
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$",
+          "minLength": 10,
+          "maxLength": 10,
+          "description": "ISO date YYYY-MM-DD."
+        },
+        "periodKey": {
+          "type": "string",
+          "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])$",
+          "minLength": 7,
+          "maxLength": 7,
+          "description": "Cycle period key YYYY-MM representing the 25th start month."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "type",
+        "amount",
+        "category",
+        "description",
+        "date",
+        "periodKey",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserSettings"
+      },
+      "description": "User cash flow cycle settings, base opening balance, and linked GitHub repository metadata."
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": {
+        "$ref": "#/entities/CashFlowTransaction"
+      },
+      "description": "Subcollection of income and expense transactions belonging to the user."
+    }
+  }
+}

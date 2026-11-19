@@ -1,0 +1,6 @@
+{
+  "name": "KasSiklus — Cash Flow Periode 25",
+  "description": "Aplikasi web manajemen arus kas siklus tanggal 25 (25 Nov – 25 Des dan seterusnya) yang terhubung ke Firestore dan repositori GitHub dengan form input, tabel ringkasan, dan grafik batang bulanan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
